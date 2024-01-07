@@ -12,12 +12,15 @@ import com.leonardobishop.quests.common.quest.Category;
 import com.leonardobishop.quests.common.quest.Quest;
 import me.clip.placeholderapi.expansion.Cacheable;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class QuestsPlaceholders extends PlaceholderExpansion implements Cacheable {
@@ -139,11 +142,7 @@ public class QuestsPlaceholders extends PlaceholderExpansion implements Cacheabl
                     } else {
                         if (qPlayer.getPlayerPreferences().getTrackedQuestId() == null ||
                                 plugin.getQuestManager().getQuestById(qPlayer.getPlayerPreferences().getTrackedQuestId()) == null) {
-                            if (args.length == 1) {
-                                return Messages.PLACEHOLDERAPI_NO_TRACKED_QUEST.getMessageLegacyColor();
-                            } else {
-                                return "";
-                            }
+                            return Messages.PLACEHOLDERAPI_NO_TRACKED_QUEST.getMessageLegacyColor();
                         }
                         quest = plugin.getQuestManager().getQuestById(qPlayer.getPlayerPreferences().getTrackedQuestId());
                     }
@@ -184,6 +183,14 @@ public class QuestsPlaceholders extends PlaceholderExpansion implements Cacheabl
                                 if (qPlayer.getQuestProgressFile().getQuestProgress(quest).isCompleted()) {
                                     final String time = Format.formatTime(TimeUnit.SECONDS.convert(qPlayer.getQuestProgressFile().getCooldownFor(quest), TimeUnit.MILLISECONDS));
                                     if (!time.startsWith("-")) result = time;
+                                } else {
+                                    result = "0";
+                                }
+                                break;
+                            case "timeleft":
+                                if (qPlayer.hasStartedQuest(quest)) {
+                                    long timeLeft = qPlayer.getQuestProgressFile().getTimeRemainingFor(quest);
+                                    result = timeLeft != -1 ? Format.formatTime(TimeUnit.SECONDS.convert(timeLeft, TimeUnit.MILLISECONDS)) : Messages.PLACEHOLDERAPI_NO_TIME_LIMIT.getMessage();
                                 } else {
                                     result = "0";
                                 }
@@ -285,7 +292,7 @@ public class QuestsPlaceholders extends PlaceholderExpansion implements Cacheabl
             final Map<String, String> map = new HashMap<>();
             map.put(params, result);
             cache.put(player, map);
-            Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, () -> cache.get(player).remove(params), plugin.getConfig().getInt("options.placeholder-cache-time", 10) * 20L);
+            plugin.getScheduler().runTaskLaterAsynchronously(() -> cache.get(player).remove(params), plugin.getConfig().getInt("options.placeholder-cache-time", 10) * 20L);
         }
         return result;
     }

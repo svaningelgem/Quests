@@ -2,6 +2,7 @@ package com.leonardobishop.quests.bukkit.tasktype.type.dependent;
 
 import com.leonardobishop.quests.bukkit.BukkitQuestsPlugin;
 import com.leonardobishop.quests.bukkit.tasktype.BukkitTaskType;
+import com.leonardobishop.quests.bukkit.util.CompatUtils;
 import com.leonardobishop.quests.bukkit.util.TaskUtils;
 import com.leonardobishop.quests.common.player.QPlayer;
 import com.leonardobishop.quests.common.player.questprogressfile.TaskProgress;
@@ -20,7 +21,7 @@ public final class MythicMobsKillingTaskType extends BukkitTaskType {
 
     private final BukkitQuestsPlugin plugin;
 
-    public MythicMobsKillingTaskType(BukkitQuestsPlugin plugin, String mythicMobsVersion) {
+    public MythicMobsKillingTaskType(BukkitQuestsPlugin plugin) {
         super("mythicmobs_killing", TaskUtils.TASK_ATTRIBUTION_STRING, "Kill a set amount of a MythicMobs entity.");
         this.plugin = plugin;
 
@@ -45,7 +46,7 @@ public final class MythicMobsKillingTaskType extends BukkitTaskType {
         } catch (ClassNotFoundException ignored) { } // MythicMobs version cannot support task type
 
         plugin.getLogger().severe("Failed to register event handler for MythicMobs task type!");
-        plugin.getLogger().severe("MythicMobs version detected: " + mythicMobsVersion);
+        plugin.getLogger().severe("MythicMobs version detected: " + CompatUtils.getPluginVersion("MythicMobs"));
     }
 
     private final class MythicMobs4Listener implements Listener {
@@ -104,7 +105,7 @@ public final class MythicMobsKillingTaskType extends BukkitTaskType {
 
             super.debug("Player killed mythic mob '" + mobName + "' (level = " + level + ")", quest.getId(), task.getId(), player.getUniqueId());
 
-            if (!TaskUtils.matchString(this, pendingTask, "name", "names", mobName, false, false, player.getUniqueId())) {
+            if (!TaskUtils.matchString(this, pendingTask, mobName, player.getUniqueId(), "name", "names", false, false)) {
                 super.debug("Continuing...", quest.getId(), task.getId(), player.getUniqueId());
                 continue;
             }
@@ -128,7 +129,8 @@ public final class MythicMobsKillingTaskType extends BukkitTaskType {
                 super.debug("Marking task as complete", quest.getId(), task.getId(), player.getUniqueId());
                 taskProgress.setCompleted(true);
             }
+
+            TaskUtils.sendTrackAdvancement(player, quest, task, taskProgress, amount);
         }
     }
-
 }

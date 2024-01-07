@@ -2,7 +2,6 @@ package com.leonardobishop.quests.bukkit.command;
 
 import com.leonardobishop.quests.bukkit.BukkitQuestsPlugin;
 import com.leonardobishop.quests.bukkit.util.Messages;
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.Nullable;
@@ -21,7 +20,7 @@ public class AdminUpdateCommandHandler implements CommandHandler {
     @Override
     public void handle(CommandSender sender, String[] args) {
         sender.sendMessage(ChatColor.GRAY + "Checking for updates...");
-        Bukkit.getScheduler().runTaskAsynchronously(this.plugin, () -> {
+        plugin.getScheduler().doAsync(() -> {
             plugin.getUpdater().check();
             if (plugin.getUpdater().isUpdateReady()) {
                 Messages.QUEST_UPDATER.send(sender,

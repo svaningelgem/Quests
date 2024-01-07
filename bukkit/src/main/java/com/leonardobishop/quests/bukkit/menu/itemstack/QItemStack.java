@@ -1,10 +1,13 @@
 package com.leonardobishop.quests.bukkit.menu.itemstack;
 
 import com.leonardobishop.quests.bukkit.BukkitQuestsPlugin;
+import com.leonardobishop.quests.bukkit.util.Format;
 import com.leonardobishop.quests.bukkit.util.Messages;
 import com.leonardobishop.quests.bukkit.util.chat.Chat;
 import com.leonardobishop.quests.common.player.QPlayer;
 import com.leonardobishop.quests.common.player.questprogressfile.QuestProgress;
+import com.leonardobishop.quests.common.player.questprogressfile.QuestProgressFile;
+import com.leonardobishop.quests.common.player.questprogressfile.TaskProgress;
 import com.leonardobishop.quests.common.quest.Quest;
 import org.bukkit.Bukkit;
 import org.bukkit.enchantments.Enchantment;
@@ -16,6 +19,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -115,6 +119,7 @@ public class QItemStack {
         if (questProgress != null) {
             for (String s : tempLore) {
                 s = processPlaceholders(s, questProgress);
+                s = processTimeLeft(s, quest, qPlayer.getQuestProgressFile());
                 if (plugin.getQuestsConfig().getBoolean("options.gui-use-placeholderapi")) {
                     s = plugin.getPlaceholderAPIProcessor().apply(player, s);
                 }
@@ -124,6 +129,39 @@ public class QItemStack {
         ism.setLore(formattedLore);
         is.setItemMeta(ism);
         return is;
+    }
+
+    public static String processPlaceholders(String s, TaskProgress taskProgress) {
+        Matcher m = Pattern.compile("\\{([^}]+)}").matcher(s);
+        while (m.find()) {
+            String[] parts = m.group(1).split(":");
+            if (parts.length > 1) {
+                if (taskProgress == null) {
+                    continue;
+                }
+                if (parts[1].equals("progress")) {
+                    Object progress = taskProgress.getProgress();
+                    String str;
+                    if (progress instanceof Float || progress instanceof Double || progress instanceof BigDecimal) {
+                        str = String.format("%.2f", progress);
+                    } else {
+                        str = String.valueOf(progress);
+                    }
+
+                    s = s.replace("{" + m.group(1) + "}", (progress == null ? String.valueOf(0) : str));
+                }
+                if (parts[1].equals("complete")) {
+                    String str;
+                    if (taskProgress.isCompleted()) {
+                        str = Chat.legacyColor(Messages.UI_PLACEHOLDERS_TRUE.getMessageLegacyColor());
+                    } else {
+                        str = Chat.legacyColor(Messages.UI_PLACEHOLDERS_FALSE.getMessageLegacyColor());
+                    }
+                    s = s.replace("{" + m.group(1) + "}", str);
+                }
+            }
+        }
+        return s;
     }
 
     public static String processPlaceholders(String s, QuestProgress questProgress) {
@@ -157,5 +195,15 @@ public class QItemStack {
             }
         }
         return s;
+    }
+
+    public static String processTimeLeft(String s, Quest quest, QuestProgressFile questProgressFile) {
+        String timeLeft;
+        if (quest.isTimeLimitEnabled()) {
+            timeLeft = Format.formatTime(TimeUnit.SECONDS.convert(questProgressFile.getTimeRemainingFor(quest), TimeUnit.MILLISECONDS));
+        } else {
+            timeLeft = Chat.legacyColor(Messages.UI_PLACEHOLDERS_NO_TIME_LIMIT.getMessageLegacyColor());
+        }
+        return s.replace("{timeleft}", timeLeft);
     }
 }

@@ -5,6 +5,7 @@ import com.leonardobishop.quests.bukkit.hook.coreprotect.AbstractCoreProtectHook
 import com.leonardobishop.quests.bukkit.hook.playerblocktracker.AbstractPlayerBlockTrackerHook;
 import com.leonardobishop.quests.bukkit.tasktype.BukkitTaskType;
 import com.leonardobishop.quests.bukkit.util.TaskUtils;
+import com.leonardobishop.quests.bukkit.util.constraint.TaskConstraintSet;
 import com.leonardobishop.quests.common.player.QPlayer;
 import com.leonardobishop.quests.common.player.questprogressfile.TaskProgress;
 import com.leonardobishop.quests.common.quest.Quest;
@@ -35,6 +36,7 @@ public final class MiningTaskType extends BukkitTaskType {
         super.addConfigValidator(TaskUtils.useBooleanConfigValidator(this, "check-coreprotect"));
         super.addConfigValidator(TaskUtils.useIntegerConfigValidator(this, "check-coreprotect-time"));
         super.addConfigValidator(TaskUtils.useBooleanConfigValidator(this, "reverse-if-placed"));
+        super.addConfigValidator(TaskUtils.useBooleanConfigValidator(this, "allow-negative-progress"));
         super.addConfigValidator(TaskUtils.useBooleanConfigValidator(this, "allow-silk-touch"));
     }
 
@@ -55,12 +57,12 @@ public final class MiningTaskType extends BukkitTaskType {
         ItemStack item = plugin.getVersionSpecificHandler().getItemInMainHand(player);
         boolean silkTouchPresent = item != null && item.getEnchantmentLevel(Enchantment.SILK_TOUCH) > 0;
 
-        for (TaskUtils.PendingTask pendingTask : TaskUtils.getApplicableTasks(player, qPlayer, this, TaskUtils.TaskConstraint.WORLD)) {
+        for (TaskUtils.PendingTask pendingTask : TaskUtils.getApplicableTasks(player, qPlayer, this, TaskConstraintSet.ALL)) {
             Quest quest = pendingTask.quest();
             Task task = pendingTask.task();
             TaskProgress taskProgress = pendingTask.taskProgress();
 
-            super.debug("Player mined block " + material.name(), quest.getId(), task.getId(), event.getPlayer().getUniqueId());
+            super.debug("Player mined block " + material.name(), quest.getId(), task.getId(), player.getUniqueId());
 
             boolean allowSilkTouch = TaskUtils.getConfigBoolean(task, "allow-silk-touch", true);
             if (!allowSilkTouch && silkTouchPresent) {
@@ -102,6 +104,8 @@ public final class MiningTaskType extends BukkitTaskType {
                     super.debug("Marking task as complete", quest.getId(), task.getId(), player.getUniqueId());
                     taskProgress.setCompleted(true);
                 }
+
+                TaskUtils.sendTrackAdvancement(player, quest, task, taskProgress, amount);
             };
 
             boolean coreProtectEnabled = TaskUtils.getConfigBoolean(task, "check-coreprotect");
@@ -152,7 +156,7 @@ public final class MiningTaskType extends BukkitTaskType {
         Block block = event.getBlock();
         Material material = block.getType();
 
-        for (TaskUtils.PendingTask pendingTask : TaskUtils.getApplicableTasks(player, qPlayer, this, TaskUtils.TaskConstraint.WORLD)) {
+        for (TaskUtils.PendingTask pendingTask : TaskUtils.getApplicableTasks(player, qPlayer, this, TaskConstraintSet.ALL)) {
             Quest quest = pendingTask.quest();
             Task task = pendingTask.task();
             TaskProgress taskProgress = pendingTask.taskProgress();
@@ -168,6 +172,13 @@ public final class MiningTaskType extends BukkitTaskType {
 
             if (!TaskUtils.matchBlock(this, pendingTask, block, player.getUniqueId())) {
                 super.debug("Continuing...", quest.getId(), task.getId(), player.getUniqueId());
+                continue;
+            }
+
+            boolean allowNegativeProgress = TaskUtils.getConfigBoolean(task, "allow-negative-progress", true);
+            int currentProgress = TaskUtils.getIntegerTaskProgress(taskProgress);
+            if (currentProgress <= 0 && !allowNegativeProgress) {
+                super.debug("Task progress is already at zero and negative progress is disabled, skipping decrement", quest.getId(), task.getId(), player.getUniqueId());
                 continue;
             }
 

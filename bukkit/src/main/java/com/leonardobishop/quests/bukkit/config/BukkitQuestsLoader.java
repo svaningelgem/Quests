@@ -2,7 +2,13 @@ package com.leonardobishop.quests.bukkit.config;
 
 import com.leonardobishop.quests.bukkit.BukkitQuestsPlugin;
 import com.leonardobishop.quests.bukkit.hook.itemgetter.ItemGetter;
-import com.leonardobishop.quests.bukkit.item.*;
+import com.leonardobishop.quests.bukkit.item.ExecutableItemsQuestItem;
+import com.leonardobishop.quests.bukkit.item.ItemsAdderQuestItem;
+import com.leonardobishop.quests.bukkit.item.MMOItemsQuestItem;
+import com.leonardobishop.quests.bukkit.item.ParsedQuestItem;
+import com.leonardobishop.quests.bukkit.item.QuestItem;
+import com.leonardobishop.quests.bukkit.item.QuestItemRegistry;
+import com.leonardobishop.quests.bukkit.item.SlimefunQuestItem;
 import com.leonardobishop.quests.bukkit.menu.itemstack.QItemStack;
 import com.leonardobishop.quests.bukkit.menu.itemstack.QItemStackRegistry;
 import com.leonardobishop.quests.bukkit.util.StringUtils;
@@ -28,9 +34,17 @@ import org.bukkit.inventory.ItemStack;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.*;
+import java.nio.file.FileVisitResult;
+import java.nio.file.FileVisitor;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -253,6 +267,7 @@ public class BukkitQuestsLoader implements QuestsLoader {
                         List<String> rewardString = config.getStringList("rewardstring");
                         List<String> startString = config.getStringList("startstring");
                         List<String> startCommands = config.getStringList("startcommands");
+                        List<String> cancelCommands = config.getStringList("cancelcommands");
                         boolean repeatable = config.getBoolean("options.repeatable", false);
                         boolean cooldown = config.getBoolean("options.cooldown.enabled", false);
                         boolean timeLimit = config.getBoolean("options.time-limit.enabled", false);
@@ -265,6 +280,7 @@ public class BukkitQuestsLoader implements QuestsLoader {
                         int sortOrder = config.getInt("options.sort-order", 1);
                         String category = config.getString("options.category");
                         Map<String, String> placeholders = new HashMap<>();
+                        Map<String, String> progressPlaceholders = new HashMap<>();
 
                         if (category != null && category.equals("")) category = null;
 
@@ -282,7 +298,9 @@ public class BukkitQuestsLoader implements QuestsLoader {
                                 .withRewardString(rewardString)
                                 .withStartString(startString)
                                 .withStartCommands(startCommands)
+                                .withCancelCommands(cancelCommands)
                                 .withPlaceholders(placeholders)
+                                .withProgressPlaceholders(progressPlaceholders)
                                 .withCooldown(cooldownTime)
                                 .withTimeLimit(timeLimtTime)
                                 .withSortOrder(sortOrder)
@@ -342,6 +360,11 @@ public class BukkitQuestsLoader implements QuestsLoader {
                             for (String p : config.getConfigurationSection("placeholders").getKeys(false)) {
                                 placeholders.put(p, config.getString("placeholders." + p));
                                 findInvalidTaskReferences(quest, config.getString("placeholders." + p), problems, "placeholders." + p);
+                            }
+                        }
+                        if (config.isConfigurationSection("progress-placeholders")) {
+                            for (String p : config.getConfigurationSection("progress-placeholders").getKeys(false)) {
+                                progressPlaceholders.put(p, config.getString("progress-placeholders." + p));
                             }
                         }
                         questManager.registerQuest(quest);
@@ -459,6 +482,10 @@ public class BukkitQuestsLoader implements QuestsLoader {
                         case "executableitems":
                             if (!Bukkit.getPluginManager().isPluginEnabled("ExecutableItems")) return FileVisitResult.CONTINUE;
                             item = new ExecutableItemsQuestItem(id, config.getString("item.id"));
+                            break;
+                        case "itemsadder":
+                            if (!Bukkit.getPluginManager().isPluginEnabled("ItemsAdder")) return FileVisitResult.CONTINUE;
+                            item = new ItemsAdderQuestItem(id, config.getString("item.id"));
                             break;
                     }
 

@@ -3,8 +3,11 @@ package com.leonardobishop.quests.bukkit.util;
 import com.leonardobishop.quests.bukkit.BukkitQuestsPlugin;
 import com.leonardobishop.quests.bukkit.item.ParsedQuestItem;
 import com.leonardobishop.quests.bukkit.item.QuestItem;
+import com.leonardobishop.quests.bukkit.menu.itemstack.QItemStack;
 import com.leonardobishop.quests.bukkit.tasktype.BukkitTaskType;
 import com.leonardobishop.quests.bukkit.util.chat.Chat;
+import com.leonardobishop.quests.bukkit.util.constraint.TaskConstraint;
+import com.leonardobishop.quests.bukkit.util.constraint.TaskConstraintSet;
 import com.leonardobishop.quests.common.config.ConfigProblem;
 import com.leonardobishop.quests.common.config.ConfigProblemDescriptions;
 import com.leonardobishop.quests.common.player.QPlayer;
@@ -16,6 +19,7 @@ import com.leonardobishop.quests.common.tasktype.TaskType;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Entity;
@@ -27,10 +31,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+@SuppressWarnings("deprecation")
 public class TaskUtils {
 
     public static final String TASK_ATTRIBUTION_STRING = "<built-in>";
@@ -110,7 +114,7 @@ public class TaskUtils {
 
     public static double getDecimalTaskProgress(TaskProgress taskProgress) {
         double progress;
-        if (taskProgress.getProgress() == null) {
+        if (taskProgress.getProgress() == null || !(taskProgress.getProgress() instanceof Double)) {
             progress = 0.0;
         } else {
             progress = (double) taskProgress.getProgress();
@@ -120,7 +124,7 @@ public class TaskUtils {
 
     public static int getIntegerTaskProgress(TaskProgress taskProgress) {
         int progress;
-        if (taskProgress.getProgress() == null) {
+        if (taskProgress.getProgress() == null || !(taskProgress.getProgress() instanceof Integer)) {
             progress = 0;
         } else {
             progress = (int) taskProgress.getProgress();
@@ -134,22 +138,113 @@ public class TaskUtils {
         return progress;
     }
 
+    public static int incrementIntegerTaskProgress(TaskProgress taskProgress, int amount) {
+        int progress = getIntegerTaskProgress(taskProgress) + amount;
+        taskProgress.setProgress(progress);
+        return progress;
+    }
+
     public static int decrementIntegerTaskProgress(TaskProgress taskProgress) {
         int progress = getIntegerTaskProgress(taskProgress);
         taskProgress.setProgress(--progress);
         return progress;
     }
 
-    public static List<PendingTask> getApplicableTasks(Player player, QPlayer qPlayer, TaskType type, TaskConstraint... constraints) {
+	public static void sendTrackAdvancement(Player player, Quest quest, Task task, TaskProgress taskProgress, Number amount) {
+        boolean useActionBar = plugin.getConfig().getBoolean("options.actionbar.progress", false)
+                || (taskProgress.isCompleted() && plugin.getConfig().getBoolean("options.actionbar.complete", false));
+        boolean useBossBar = plugin.getConfig().getBoolean("options.bossbar.progress", false)
+                || (taskProgress.isCompleted() && plugin.getConfig().getBoolean("options.bossbar.complete", false));
+        if (!useActionBar && !useBossBar) {
+            return;
+        }
+
+        String title;
+
+        titleSearch:
+        {
+            title = quest.getProgressPlaceholders().get(task.getId()); // custom title
+            if (title != null) {
+                break titleSearch;
+            }
+
+            title = quest.getProgressPlaceholders().get("*"); // one title for all tasks
+            if (title != null) {
+                break titleSearch;
+            }
+
+            boolean useProgressAsFallback = plugin.getQuestsConfig().getBoolean("options.use-progress-as-fallback", true);
+            if (!useProgressAsFallback) {
+                return;
+            }
+
+            title = quest.getPlaceholders().get("progress"); // fallback title
+            if (title != null) {
+                break titleSearch;
+            }
+
+            return; // no valid title format found
+        }
+
+        title = QItemStack.processPlaceholders(title, taskProgress);
+
+        boolean usePlaceholderAPI = plugin.getQuestsConfig().getBoolean("options.progress-use-placeholderapi", false);
+        if (usePlaceholderAPI) {
+            title = plugin.getPlaceholderAPIProcessor().apply(player, title);
+        }
+
+        title = Chat.legacyColor(title);
+
+        if (useActionBar) {
+            sendTrackAdvancementActionBar(player, title);
+        }
+
+        if (useBossBar) {
+            sendTrackAdvancementBossBar(player, quest, task, taskProgress, title, amount);
+        }
+    }
+
+    private static void sendTrackAdvancementActionBar(Player player, String title) {
+        plugin.getActionBarHandle().sendActionBar(player, title);
+    }
+
+    private static void sendTrackAdvancementBossBar(Player player, Quest quest, Task task, TaskProgress taskProgress, String title, Number amount) {
+        Double bossBarProgress = null;
+
+        if (!taskProgress.isCompleted()) {
+            Object progress = taskProgress.getProgress();
+            if (progress instanceof Number number) {
+                bossBarProgress = number.doubleValue();
+            }
+
+            if (bossBarProgress != null) { // if has value
+                bossBarProgress /= amount.doubleValue(); // calculate progress
+            }
+        }
+
+        int bossBarTime = plugin.getConfig().getInt("options.bossbar.time", 5);
+
+        if (bossBarProgress != null) {
+            float bossBarFloatProgress = (float) Math.min(1.0d, Math.max(0.0d, bossBarProgress));
+            plugin.getBossBarHandle().sendBossBar(player, quest.getId(), title, bossBarTime, bossBarFloatProgress);
+        } else {
+            plugin.getBossBarHandle().sendBossBar(player, quest.getId(), title, bossBarTime);
+        }
+    }
+
+    public static List<PendingTask> getApplicableTasks(Player player, QPlayer qPlayer, TaskType type) {
+        return getApplicableTasks(player, qPlayer, type, TaskConstraintSet.NONE);
+    }
+
+    public static List<PendingTask> getApplicableTasks(Player player, QPlayer qPlayer, TaskType type, TaskConstraintSet constraintSet) {
         List<PendingTask> tasks = new ArrayList<>();
-        List<TaskConstraint> taskConstraints = Arrays.asList(constraints);
 
         for (Quest quest : type.getRegisteredQuests()) {
             if (qPlayer.hasStartedQuest(quest)) {
                 QuestProgress questProgress = qPlayer.getQuestProgressFile().getQuestProgress(quest);
 
                 for (Task task : quest.getTasksOfType(type.getType())) {
-                    if (taskConstraints.contains(TaskConstraint.WORLD)) {
+                    if (constraintSet.contains(TaskConstraint.WORLD)) {
                         if (!TaskUtils.validateWorld(player, task)) {
                             continue;
                         }
@@ -171,25 +266,32 @@ public class TaskUtils {
 
     public record PendingTask(Quest quest, Task task, QuestProgress questProgress, TaskProgress taskProgress) { }
 
-    public enum TaskConstraint {
-        WORLD
+    public static boolean matchBlock(@NotNull BukkitTaskType type, @NotNull PendingTask pendingTask, @Nullable Block block, @NotNull UUID player) {
+        return matchBlock(type, pendingTask, block, player, "block", "blocks");
     }
 
-    public static boolean matchBlock(@NotNull BukkitTaskType type, @NotNull PendingTask pendingTask, @NotNull Block block, @NotNull UUID player) {
+    public static boolean matchBlock(@NotNull BukkitTaskType type, @NotNull PendingTask pendingTask, @Nullable Block block, @NotNull UUID player, @NotNull String stringKey, @NotNull String listKey) {
+        return matchBlock(type, pendingTask, block != null ? block.getState() : null, player, stringKey, listKey);
+    }
+
+    public static boolean matchBlock(@NotNull BukkitTaskType type, @NotNull PendingTask pendingTask, @Nullable BlockState state, @NotNull UUID player) {
+        return matchBlock(type, pendingTask, state, player, "block", "blocks");
+    }
+
+    public static boolean matchBlock(@NotNull BukkitTaskType type, @NotNull PendingTask pendingTask, @Nullable BlockState state, @NotNull UUID player, @NotNull String stringKey, @NotNull String listKey) {
         Task task = pendingTask.task;
 
-        List<String> checkBlocks = TaskUtils.getConfigStringList(task, task.getConfigValues().containsKey("block") ? "block" : "blocks");
+        List<String> checkBlocks = TaskUtils.getConfigStringList(task, task.getConfigValues().containsKey(stringKey) ? stringKey : listKey);
         if (checkBlocks == null) {
             return true;
         } else if (checkBlocks.isEmpty()) {
-            return false;
+            return state == null;
         }
 
         Object configData = task.getConfigValue("data");
 
-        Material blockMaterial = block.getType();
-        //noinspection deprecation
-        byte blockData = block.getData();
+        Material blockMaterial = state.getType();
+        byte blockData = state.getRawData();
 
         Material material;
         int comparableData;
@@ -220,11 +322,15 @@ public class TaskUtils {
     }
 
     public static boolean matchColorable(@NotNull BukkitTaskType type, @NotNull PendingTask pendingTask, @NotNull Colorable colorable, @NotNull UUID player) {
+        return matchColorable(type, pendingTask, colorable, player, "color", "colors");
+    }
+
+    public static boolean matchColorable(@NotNull BukkitTaskType type, @NotNull PendingTask pendingTask, @NotNull Colorable colorable, @NotNull UUID player, @NotNull String stringKey, @NotNull String listKey) {
         Task task = pendingTask.task;
 
         DyeColor colorableColor = colorable.getColor();
 
-        List<String> checkColors = TaskUtils.getConfigStringList(task, task.getConfigValues().containsKey("color") ? "color" : "colors");
+        List<String> checkColors = TaskUtils.getConfigStringList(task, task.getConfigValues().containsKey(stringKey) ? stringKey : listKey);
         if (checkColors == null) {
             return true;
         } else if (checkColors.isEmpty()) {
@@ -254,9 +360,13 @@ public class TaskUtils {
     }
 
     public static boolean matchEntity(@NotNull BukkitTaskType type, @NotNull PendingTask pendingTask, @NotNull Entity entity, @NotNull UUID player) {
+        return matchEntity(type, pendingTask, entity, player, "mob", "mobs");
+    }
+
+    public static boolean matchEntity(@NotNull BukkitTaskType type, @NotNull PendingTask pendingTask, @NotNull Entity entity, @NotNull UUID player, @NotNull String stringKey, @NotNull String listKey) {
         Task task = pendingTask.task;
 
-        List<String> checkMobs = TaskUtils.getConfigStringList(task, task.getConfigValues().containsKey("mob") ? "mob" : "mobs");
+        List<String> checkMobs = TaskUtils.getConfigStringList(task, task.getConfigValues().containsKey(stringKey) ? stringKey : listKey);
         if (checkMobs == null) {
             return true;
         } else if (checkMobs.isEmpty()) {
@@ -283,10 +393,10 @@ public class TaskUtils {
         return false;
     }
 
-    public static boolean matchString(@NotNull BukkitTaskType type, @NotNull PendingTask pendingTask, final @NotNull String stringKey, final @NotNull String stringListKey, @Nullable String string, boolean legacyColor, boolean ignoreCase, @NotNull UUID player) {
+    public static boolean matchString(@NotNull BukkitTaskType type, @NotNull PendingTask pendingTask, @Nullable String string, @NotNull UUID player, final @NotNull String stringKey, final @NotNull String listKey, boolean legacyColor, boolean ignoreCase) {
         Task task = pendingTask.task;
 
-        List<String> checkNames = TaskUtils.getConfigStringList(task, task.getConfigValues().containsKey(stringKey) ? stringKey : stringListKey);
+        List<String> checkNames = TaskUtils.getConfigStringList(task, task.getConfigValues().containsKey(stringKey) ? stringKey : listKey);
         if (checkNames == null) {
             return true;
         } else if (checkNames.isEmpty()) {

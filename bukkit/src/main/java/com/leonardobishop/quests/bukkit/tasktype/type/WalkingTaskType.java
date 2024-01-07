@@ -3,15 +3,16 @@ package com.leonardobishop.quests.bukkit.tasktype.type;
 import com.leonardobishop.quests.bukkit.BukkitQuestsPlugin;
 import com.leonardobishop.quests.bukkit.tasktype.BukkitTaskType;
 import com.leonardobishop.quests.bukkit.util.TaskUtils;
+import com.leonardobishop.quests.bukkit.util.constraint.TaskConstraintSet;
 import com.leonardobishop.quests.common.player.QPlayer;
 import com.leonardobishop.quests.common.player.questprogressfile.TaskProgress;
 import com.leonardobishop.quests.common.quest.Quest;
 import com.leonardobishop.quests.common.quest.Task;
 import org.bukkit.entity.Boat;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.Minecart;
 import org.bukkit.entity.Pig;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.minecart.RideableMinecart;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.player.PlayerMoveEvent;
@@ -52,8 +53,8 @@ public final class WalkingTaskType extends BukkitTaskType {
         }
 
         Player player = event.getPlayer();
-        if (player.isInsideVehicle()) {
-            return;
+        if (player.getVehicle() instanceof RideableMinecart) {
+            return; // minecarts movement is already handled by VehicleMoveEvent
         }
 
         handle(player);
@@ -83,7 +84,7 @@ public final class WalkingTaskType extends BukkitTaskType {
             return;
         }
 
-        for (TaskUtils.PendingTask pendingTask : TaskUtils.getApplicableTasks(player.getPlayer(), qPlayer, this, TaskUtils.TaskConstraint.WORLD)) {
+        for (TaskUtils.PendingTask pendingTask : TaskUtils.getApplicableTasks(player, qPlayer, this, TaskConstraintSet.ALL)) {
             Quest quest = pendingTask.quest();
             Task task = pendingTask.task();
             TaskProgress taskProgress = pendingTask.taskProgress();
@@ -92,7 +93,7 @@ public final class WalkingTaskType extends BukkitTaskType {
 
             final String mode = (String) task.getConfigValue("mode");
             if (mode != null && !validateMode(player, mode)) {
-                super.debug("Player's mode does not match required mode, continuing...", quest.getId(), task.getId(), player.getUniqueId());
+                super.debug("Player mode does not match required mode, continuing...", quest.getId(), task.getId(), player.getUniqueId());
                 continue;
             }
 
@@ -105,6 +106,8 @@ public final class WalkingTaskType extends BukkitTaskType {
                 super.debug("Marking task as complete", quest.getId(), task.getId(), player.getUniqueId());
                 taskProgress.setCompleted(true);
             }
+
+            TaskUtils.sendTrackAdvancement(player, quest, task, taskProgress, distanceNeeded);
         }
     }
 
@@ -113,7 +116,7 @@ public final class WalkingTaskType extends BukkitTaskType {
             case "boat" -> player.getVehicle() instanceof Boat;
             case "horse" -> plugin.getVersionSpecificHandler().isPlayerOnHorse(player);
             case "pig" -> player.getVehicle() instanceof Pig;
-            case "minecart" -> player.getVehicle() instanceof Minecart;
+            case "minecart" -> player.getVehicle() instanceof RideableMinecart;
             case "strider" -> plugin.getVersionSpecificHandler().isPlayerOnStrider(player);
             case "sneaking" -> // sprinting does not matter
                     player.isSneaking() && !player.isSwimming() && !player.isFlying()
@@ -132,5 +135,4 @@ public final class WalkingTaskType extends BukkitTaskType {
             default -> false;
         };
     }
-
 }

@@ -1,7 +1,13 @@
 package com.leonardobishop.quests.bukkit.questcontroller;
 
 import com.leonardobishop.quests.bukkit.BukkitQuestsPlugin;
-import com.leonardobishop.quests.bukkit.api.event.*;
+import com.leonardobishop.quests.bukkit.api.event.PlayerCancelQuestEvent;
+import com.leonardobishop.quests.bukkit.api.event.PlayerExpireQuestEvent;
+import com.leonardobishop.quests.bukkit.api.event.PlayerFinishQuestEvent;
+import com.leonardobishop.quests.bukkit.api.event.PlayerStartQuestEvent;
+import com.leonardobishop.quests.bukkit.api.event.PlayerStartTrackQuestEvent;
+import com.leonardobishop.quests.bukkit.api.event.PlayerStopTrackQuestEvent;
+import com.leonardobishop.quests.bukkit.api.event.PreStartQuestEvent;
 import com.leonardobishop.quests.bukkit.config.BukkitQuestsConfig;
 import com.leonardobishop.quests.bukkit.menu.itemstack.QItemStack;
 import com.leonardobishop.quests.bukkit.util.Format;
@@ -183,7 +189,7 @@ public class NormalQuestController implements QuestController {
         if (questProgress.isStarted() || quest.isAutoStartEnabled() || config.getBoolean("options.quest-autostart")) {
             return QuestStartResult.QUEST_ALREADY_STARTED;
         }
-        if (!config.getBoolean("options.quest-autostart")) {
+        if (!config.getBoolean("options.quest-autostart") && quest.doesCountTowardsLimit()) {
             Set<Quest> startedQuests = getStartedQuestsForPlayer(qPlayer);
             int questLimitCount = 0;
             for (Quest q : startedQuests) {
@@ -222,7 +228,7 @@ public class NormalQuestController implements QuestController {
             PlayerFinishQuestEvent questFinishEvent = new PlayerFinishQuestEvent(player, qPlayer, questProgress, questFinishMessage);
             Bukkit.getPluginManager().callEvent(questFinishEvent);
             // PlayerFinishQuestEvent -- end
-            Bukkit.getServer().getScheduler().runTask(plugin, () -> {
+            plugin.getScheduler().doSync(() -> {
                 for (String s : quest.getRewards()) {
                     s = s.replace("{player}", player.getName());
                     if (plugin.getConfig().getBoolean("options.quests-use-placeholderapi")) {
@@ -288,6 +294,14 @@ public class NormalQuestController implements QuestController {
             Bukkit.getPluginManager().callEvent(questCancelEvent);
             // PlayerCancelQuestEvent -- end
             Messages.send(questCancelEvent.getQuestCancelMessage(), player);
+            for (String s : quest.getCancelCommands()) {
+                s = s.replace("{player}", player.getName());
+                if (plugin.getConfig().getBoolean("options.quests-use-placeholderapi")) {
+                    Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), plugin.getPlaceholderAPIProcessor().apply(player, s));
+                } else {
+                    Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), s);
+                }
+            }
             SoundUtils.playSoundForPlayer(player, plugin.getQuestsConfig().getString("options.sounds.quest-cancel"));
         }
         if (config.getBoolean("options.allow-quest-track")

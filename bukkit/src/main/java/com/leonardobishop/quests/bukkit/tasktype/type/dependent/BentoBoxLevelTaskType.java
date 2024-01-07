@@ -29,7 +29,6 @@ public final class BentoBoxLevelTaskType extends BukkitTaskType {
         super.addConfigValidator(TaskUtils.useIntegerConfigValidator(this, "level"));
     }
 
-
     public static void register(BukkitQuestsPlugin plugin, TaskTypeManager manager) {
         if (BentoBox.getInstance().getAddonsManager().getAddonByName("Level").isPresent()) {
             manager.registerTaskType(new BentoBoxLevelTaskType(plugin));
@@ -72,6 +71,8 @@ public final class BentoBoxLevelTaskType extends BukkitTaskType {
                         taskProgress.setProgress(newLevel);
                         taskProgress.setCompleted(true);
                     }
+
+                    TaskUtils.sendTrackAdvancement(player, quest, task, taskProgress, islandLevelNeeded);
                 }
             }
         }

@@ -34,7 +34,7 @@ repositories {
     maven { url = 'https://repo.leonardobishop.com/releases/' }
     // PlaceholderAPI
     maven { url = 'https://repo.extendedclip.com/content/repositories/dev/' }
-    // PlayerBlockTracker, SCore, ShopGUIPlus, Slimefun4
+    // ItemsAdder, PlayerBlockTracker, SCore, ShopGUIPlus, Slimefun4
     maven { url = 'https://jitpack.io/' }
     // PlayerPoints
     maven { url = 'https://repo.rosewooddev.io/repository/public/' }
@@ -52,7 +52,11 @@ repositories {
 dependencies {
     compileOnly project(':common')
     // Paper
-    compileOnly('io.papermc.paper:paper-api:1.20.1-R0.1-SNAPSHOT') {
+    compileOnly('io.papermc.paper:paper-api:1.20.2-R0.1-SNAPSHOT') {
+        exclude(group: 'it.unimi.dsi', module: 'fastutil') // exclude fastutil just to don't use it (for 1.8 support)
+    }
+    // Folia
+    compileOnly('dev.folia:folia-api:1.20.1-R0.1-SNAPSHOT') {
         exclude(group: 'it.unimi.dsi', module: 'fastutil') // exclude fastutil just to don't use it (for 1.8 support)
     }
     // ASkyBlock
@@ -75,6 +79,8 @@ dependencies {
     compileOnly 'com.songoda:skyblock:2.3.30'
     // IridiumSkyblock TODO fix whenever repo is up
     //compileOnly 'com.github.Iridium-Development:IridiumSkyblock:master-SNAPSHOT'
+    // ItemsAdder
+    compileOnly 'com.github.LoneDev6:API-ItemsAdder:3.5.0b'
     // JetBrains Annotations
     compileOnly 'org.jetbrains:annotations:23.0.0'
     // MMOItems

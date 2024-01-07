@@ -6,6 +6,7 @@ import com.leonardobishop.quests.bukkit.BukkitQuestsPlugin;
 import com.leonardobishop.quests.bukkit.item.QuestItem;
 import com.leonardobishop.quests.bukkit.tasktype.BukkitTaskType;
 import com.leonardobishop.quests.bukkit.util.TaskUtils;
+import com.leonardobishop.quests.bukkit.util.constraint.TaskConstraintSet;
 import com.leonardobishop.quests.common.player.QPlayer;
 import com.leonardobishop.quests.common.player.questprogressfile.TaskProgress;
 import com.leonardobishop.quests.common.quest.Quest;
@@ -41,11 +42,6 @@ public final class InteractTaskType extends BukkitTaskType {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerInteract(PlayerInteractEvent event) {
-        Block block = event.getClickedBlock();
-        if (block == null) {
-            return;
-        }
-
         Player player = event.getPlayer();
         if (player.hasMetadata("NPC")) {
             return;
@@ -56,14 +52,20 @@ public final class InteractTaskType extends BukkitTaskType {
             return;
         }
 
+        Block block = event.getClickedBlock();
         ItemStack item = event.getItem();
 
-        for (TaskUtils.PendingTask pendingTask : TaskUtils.getApplicableTasks(player, qPlayer, this, TaskUtils.TaskConstraint.WORLD)) {
+        for (TaskUtils.PendingTask pendingTask : TaskUtils.getApplicableTasks(player, qPlayer, this, TaskConstraintSet.ALL)) {
             Quest quest = pendingTask.quest();
             Task task = pendingTask.task();
             TaskProgress taskProgress = pendingTask.taskProgress();
 
             super.debug("Player interacted", quest.getId(), task.getId(), player.getUniqueId());
+
+            if (!TaskUtils.matchBlock(this, pendingTask, block, player.getUniqueId())) {
+                super.debug("Continuing...", quest.getId(), task.getId(), player.getUniqueId());
+                continue;
+            }
 
             if (task.hasConfigKey("item")) {
                 if (item == null) {
@@ -89,12 +91,6 @@ public final class InteractTaskType extends BukkitTaskType {
                 }
             }
 
-            super.debug("Player clicked block " + block.getType(), quest.getId(), task.getId(), player.getUniqueId());
-            if (!TaskUtils.matchBlock(this, pendingTask, block, player.getUniqueId())) {
-                super.debug("Continuing...", quest.getId(), task.getId(), player.getUniqueId());
-                continue;
-            }
-
             int progress = TaskUtils.incrementIntegerTaskProgress(taskProgress);
             super.debug("Incrementing task progress (now " + progress + ")", quest.getId(), task.getId(), player.getUniqueId());
 
@@ -104,6 +100,8 @@ public final class InteractTaskType extends BukkitTaskType {
                 super.debug("Marking task as complete", quest.getId(), task.getId(), player.getUniqueId());
                 taskProgress.setCompleted(true);
             }
+
+            TaskUtils.sendTrackAdvancement(player, quest, task, taskProgress, amount);
         }
     }
 }

@@ -3,7 +3,13 @@ package com.leonardobishop.quests.common.quest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 public class Quest implements Comparable<Quest> {
 
@@ -15,6 +21,7 @@ public class Quest implements Comparable<Quest> {
     private List<String> rewardString;
     private List<String> startString;
     private List<String> startCommands;
+    private List<String> cancelCommands;
     private boolean repeatEnabled;
     private boolean cooldownEnabled;
     private int cooldown;
@@ -26,6 +33,7 @@ public class Quest implements Comparable<Quest> {
     private boolean cancellable;
     private boolean countsTowardsLimit;
     private Map<String, String> placeholders;
+    private Map<String, String> progressPlaceholders;
     private String categoryid;
 
     private Quest() { }
@@ -155,6 +163,16 @@ public class Quest implements Comparable<Quest> {
     }
 
     /**
+     * Get the cancel commands for this quest.
+     * The cancel commands is a list of commands to be executed upon cancelling the quest.
+     *
+     * @return immutable list of commands
+     */
+    public List<String> getCancelCommands() {
+        return Collections.unmodifiableList(cancelCommands);
+    }
+
+    /**
      * Get if this quest can be repeated after completion.
      *
      * @return boolean
@@ -222,6 +240,15 @@ public class Quest implements Comparable<Quest> {
     }
 
     /**
+     * Get the local progress placeholders for this quest, which is not exposed to PlaceholderAPI.
+     *
+     * @return immutable map of progress placeholders
+     */
+    public @NotNull Map<String, String> getProgressPlaceholders() {
+        return Collections.unmodifiableMap(progressPlaceholders);
+    }
+
+    /**
      * Get the sort order for this quest in the GUI.
      * Numbers closer to Integer.MIN_VALUE have greater priority.
      *
@@ -278,6 +305,7 @@ public class Quest implements Comparable<Quest> {
         private List<String> rewardString = Collections.emptyList();
         private List<String> startString = Collections.emptyList();
         private List<String> startCommands = Collections.emptyList();
+        private List<String> cancelCommands = Collections.emptyList();
         private boolean repeatEnabled = false;
         private boolean cooldownEnabled = false;
         private int cooldown = 0;
@@ -289,6 +317,7 @@ public class Quest implements Comparable<Quest> {
         private boolean cancellable = true;
         private boolean countsTowardsLimit = true;
         private Map<String, String> placeholders = Collections.emptyMap();
+        private Map<String, String> progressPlaceholders = Collections.emptyMap();
         private String categoryid = null;
 
         public Builder(String id) {
@@ -320,6 +349,11 @@ public class Quest implements Comparable<Quest> {
             return this;
         }
 
+        public Builder withCancelCommands(List<String> cancelCommands) {
+            this.cancelCommands = cancelCommands;
+            return this;
+        }
+
         public Builder withSortOrder(int sortOrder) {
             this.sortOrder = sortOrder;
             return this;
@@ -337,6 +371,11 @@ public class Quest implements Comparable<Quest> {
 
         public Builder withPlaceholders(Map<String, String> placeholders) {
             this.placeholders = placeholders;
+            return this;
+        }
+
+        public Builder withProgressPlaceholders(Map<String, String> progressPlaceholders) {
+            this.progressPlaceholders = progressPlaceholders;
             return this;
         }
 
@@ -388,6 +427,7 @@ public class Quest implements Comparable<Quest> {
             quest.rewardString = this.rewardString;
             quest.startString = this.startString;
             quest.startCommands = this.startCommands;
+            quest.cancelCommands = this.cancelCommands;
             quest.repeatEnabled = this.repeatEnabled;
             quest.cooldownEnabled = this.cooldownEnabled;
             quest.cooldown = this.cooldown;
@@ -399,6 +439,7 @@ public class Quest implements Comparable<Quest> {
             quest.countsTowardsLimit = countsTowardsLimit;
             quest.cancellable = this.cancellable;
             quest.placeholders = this.placeholders;
+            quest.progressPlaceholders = this.progressPlaceholders;
             quest.categoryid = this.categoryid;
 
             return quest;

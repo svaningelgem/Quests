@@ -36,6 +36,22 @@ options:
   trim-gui-size: true
   # Enable/disable titles
   titles-enabled: true
+  # Enable/disable BossBars
+  bossbar:
+    progress: false
+    complete: false
+    # Time in seconds of bossbar showed
+    time: 5
+    # See https://hub.spigotmc.org/javadocs/spigot/org/bukkit/boss/BarColor.html
+    color:
+      '0.0': BLUE # for 0.0 and higher progress values (progress is always between 0.0 and 1.0)
+    # See https://hub.spigotmc.org/javadocs/spigot/org/bukkit/boss/BarStyle.html
+    style:
+      '0.0': SOLID # for 0.0 and higher progress values (progress is always between 0.0 and 1.0)
+  # Enable/disable ActionBar
+  actionbar:
+    progress: false
+    complete: false
   # Allow players to have multiple active quests.
   # You can set the default number of quests using the 'default' rank below.
   # To grant different quest limits to different people, you can define a 'quest-rank'
@@ -94,6 +110,12 @@ options:
   record-log-history: true
   # Replace placeholders from PlaceholderAPI in rewards, rewardstrings and start strings
   quests-use-placeholderapi: false
+  # Replace placeholders from PlaceholderAPI in boss bar and action bar progress strings
+  progress-use-placeholderapi: false
+  # If true, progress string from placeholders section will be used as fallback in boss bar
+  # and action bar in case there is no matching string set in progress-placeholders section.
+  # Otherwise, the bar will not appear at all.
+  use-progress-as-fallback: true
   # PlayerBlockTracker class to be used with the hook
   playerblocktracker-class-name: "com.gestankbratwurst.playerblocktracker.PlayerBlockTracker"
   # Verify quests exist when a player's data is loaded - inconsistencies may arise when
@@ -216,21 +238,29 @@ global-macros:
 # -----------------------------------------------------------
 gui:
   back-button:
+    enabled: true
+    slot: 45
     name: "&cReturn"
     lore:
       - "&7Return to the categories menu."
     type: "ARROW"
   page-prev:
+    enabled: true
+    slot: 48
     name: "&7Previous Page"
     lore:
       - "&7Switch the page to page &c{prevpage}."
     type: "FEATHER"
   page-next:
+    enabled: true
+    slot: 50
     name: "&7Next Page"
     lore:
       - "&7Switch the page to page &c{nextpage}."
     type: "FEATHER"
   page-desc:
+    enabled: true
+    slot: 49
     name: "&7Page &c{page}"
     lore:
       - "&7You are currently viewing page &c{page}."
@@ -407,9 +437,12 @@ messages:
   ui-placeholder-completed-true: "true"
   ui-placeholder-completed-false: "false"
   ui-placeholder-truncated: " +{amount} more"
+  ui-placeholder-no-time-limit: "No time limit"
   placeholderapi-true: "true"
   placeholderapi-false: "false"
   placeholderapi-no-tracked-quest: "No tracked quest"
+  placeholderapi-quest-not-started: "Quest not started"
+  placeholderapi-no-time-limit: "No time limit"
   placeholderapi-data-not-loaded: "Data not loaded"
 
 

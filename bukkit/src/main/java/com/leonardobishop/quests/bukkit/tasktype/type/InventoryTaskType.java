@@ -6,11 +6,11 @@ import com.leonardobishop.quests.bukkit.BukkitQuestsPlugin;
 import com.leonardobishop.quests.bukkit.item.QuestItem;
 import com.leonardobishop.quests.bukkit.tasktype.BukkitTaskType;
 import com.leonardobishop.quests.bukkit.util.TaskUtils;
+import com.leonardobishop.quests.bukkit.util.constraint.TaskConstraintSet;
 import com.leonardobishop.quests.common.player.QPlayer;
 import com.leonardobishop.quests.common.player.questprogressfile.TaskProgress;
 import com.leonardobishop.quests.common.quest.Quest;
 import com.leonardobishop.quests.common.quest.Task;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -84,14 +84,15 @@ public final class InventoryTaskType extends BukkitTaskType {
         }
     }
 
+    @SuppressWarnings("SameParameterValue")
     private void checkInventory(HumanEntity humanEntity, long delay) {
         if (!(humanEntity instanceof Player player)) return;
         checkInventory(player, delay);
     }
 
     private void checkInventory(Player player, long delay) {
-        if (player.hasMetadata("NPC")) return;
-        Bukkit.getScheduler().runTaskLater(plugin, () -> checkInventory(player), delay);
+        if (player.hasMetadata("NPC") || !player.isOnline()) return;
+        plugin.getScheduler().runTaskLaterAtLocation(player.getLocation(), () -> checkInventory(player), delay);
     }
 
     private void checkInventory(Player player) {
@@ -104,7 +105,7 @@ public final class InventoryTaskType extends BukkitTaskType {
             return;
         }
 
-        for (TaskUtils.PendingTask pendingTask : TaskUtils.getApplicableTasks(player, qPlayer, this, TaskUtils.TaskConstraint.WORLD)) {
+        for (TaskUtils.PendingTask pendingTask : TaskUtils.getApplicableTasks(player, qPlayer, this, TaskConstraintSet.ALL)) {
             Quest quest = pendingTask.quest();
             Task task = pendingTask.task();
             TaskProgress taskProgress = pendingTask.taskProgress();
@@ -163,7 +164,8 @@ public final class InventoryTaskType extends BukkitTaskType {
                     }
                 }
             }
+
+            TaskUtils.sendTrackAdvancement(player, quest, task, taskProgress, amount);
         }
     }
-
 }

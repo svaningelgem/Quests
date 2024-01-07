@@ -2,11 +2,10 @@ package com.leonardobishop.quests.bukkit.hook.title;
 
 import org.bukkit.entity.Player;
 
-public class Title_Bukkit implements Title {
-
-    // new title function with timings
+public class Title_Bukkit implements QuestsTitle {
+    @SuppressWarnings("deprecation")
     @Override
-    public void sendTitle(Player player, String message, String submessage) {
-        player.sendTitle(message, submessage, 10, 100, 10);
+    public void sendTitle(Player player, String title, String subtitle) {
+        player.sendTitle(title, subtitle, 10, 100, 10);
     }
 }

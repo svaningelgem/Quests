@@ -14,7 +14,6 @@ import com.leonardobishop.quests.common.quest.Quest;
 import com.leonardobishop.quests.common.quest.Task;
 import net.citizensnpcs.api.event.NPCRightClickEvent;
 import net.citizensnpcs.api.npc.NPC;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -56,8 +55,8 @@ public final class CitizensDeliverTaskType extends BukkitTaskType {
 
     @SuppressWarnings("SameParameterValue")
     private void checkInventory(Player player, NPC npc, long delay) {
-        if (player.hasMetadata("NPC")) return;
-        Bukkit.getScheduler().runTaskLater(plugin, () -> checkInventory(player, npc), delay);
+        if (player.hasMetadata("NPC") || !player.isOnline()) return;
+        plugin.getScheduler().runTaskLaterAtLocation(player.getLocation(), () -> checkInventory(player, npc), delay);
     }
 
     @SuppressWarnings("deprecation")
@@ -152,7 +151,8 @@ public final class CitizensDeliverTaskType extends BukkitTaskType {
                     }
                 }
             }
+
+            TaskUtils.sendTrackAdvancement(player, quest, task, taskProgress, amount);
         }
     }
-
 }

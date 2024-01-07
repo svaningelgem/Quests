@@ -51,6 +51,8 @@ public final class ASkyBlockLevelTaskType extends BukkitTaskType {
                 taskProgress.setProgress(islandLevelNeeded);
                 taskProgress.setCompleted(true);
             }
+
+            TaskUtils.sendTrackAdvancement(player, quest, task, taskProgress, islandLevelNeeded);
         }
     }
 }

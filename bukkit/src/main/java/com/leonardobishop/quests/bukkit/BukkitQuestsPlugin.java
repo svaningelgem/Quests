@@ -3,23 +3,41 @@ package com.leonardobishop.quests.bukkit;
 import com.leonardobishop.quests.bukkit.command.QuestsCommandSwitcher;
 import com.leonardobishop.quests.bukkit.config.BukkitQuestsConfig;
 import com.leonardobishop.quests.bukkit.config.BukkitQuestsLoader;
+import com.leonardobishop.quests.bukkit.hook.actionbar.ActionBar_Nothing;
+import com.leonardobishop.quests.bukkit.hook.actionbar.ActionBar_Paper;
+import com.leonardobishop.quests.bukkit.hook.actionbar.ActionBar_Spigot;
+import com.leonardobishop.quests.bukkit.hook.actionbar.QuestsActionBar;
+import com.leonardobishop.quests.bukkit.hook.bossbar.BossBar_Bukkit;
+import com.leonardobishop.quests.bukkit.hook.bossbar.BossBar_Nothing;
+import com.leonardobishop.quests.bukkit.hook.bossbar.QuestsBossBar;
 import com.leonardobishop.quests.bukkit.hook.coreprotect.AbstractCoreProtectHook;
 import com.leonardobishop.quests.bukkit.hook.coreprotect.CoreProtectHook;
 import com.leonardobishop.quests.bukkit.hook.essentials.AbstractEssentialsHook;
 import com.leonardobishop.quests.bukkit.hook.essentials.EssentialsHook;
 import com.leonardobishop.quests.bukkit.hook.itemgetter.ItemGetter;
-import com.leonardobishop.quests.bukkit.hook.itemgetter.ItemGetterLatest;
-import com.leonardobishop.quests.bukkit.hook.itemgetter.ItemGetter_1_13;
-import com.leonardobishop.quests.bukkit.hook.itemgetter.ItemGetter_Late_1_8;
+import com.leonardobishop.quests.bukkit.hook.itemgetter.ItemGetter13;
+import com.leonardobishop.quests.bukkit.hook.itemgetter.ItemGetter14;
+import com.leonardobishop.quests.bukkit.hook.itemgetter.ItemGetter8;
 import com.leonardobishop.quests.bukkit.hook.papi.AbstractPlaceholderAPIHook;
 import com.leonardobishop.quests.bukkit.hook.papi.PlaceholderAPIHook;
 import com.leonardobishop.quests.bukkit.hook.playerblocktracker.AbstractPlayerBlockTrackerHook;
 import com.leonardobishop.quests.bukkit.hook.playerblocktracker.PlayerBlockTrackerHook;
-import com.leonardobishop.quests.bukkit.hook.title.Title;
+import com.leonardobishop.quests.bukkit.hook.skullgetter.BukkitSkullGetter;
+import com.leonardobishop.quests.bukkit.hook.skullgetter.LegacySkullGetter;
+import com.leonardobishop.quests.bukkit.hook.skullgetter.ModernSkullGetter;
+import com.leonardobishop.quests.bukkit.hook.skullgetter.PaperSkullGetter;
+import com.leonardobishop.quests.bukkit.hook.skullgetter.SkullGetter;
+import com.leonardobishop.quests.bukkit.hook.title.QuestsTitle;
 import com.leonardobishop.quests.bukkit.hook.title.Title_Bukkit;
 import com.leonardobishop.quests.bukkit.hook.title.Title_BukkitNoTimings;
-import com.leonardobishop.quests.bukkit.hook.title.Title_Other;
-import com.leonardobishop.quests.bukkit.hook.versionspecific.*;
+import com.leonardobishop.quests.bukkit.hook.title.Title_Nothing;
+import com.leonardobishop.quests.bukkit.hook.versionspecific.VersionSpecificHandler;
+import com.leonardobishop.quests.bukkit.hook.versionspecific.VersionSpecificHandler11;
+import com.leonardobishop.quests.bukkit.hook.versionspecific.VersionSpecificHandler16;
+import com.leonardobishop.quests.bukkit.hook.versionspecific.VersionSpecificHandler17;
+import com.leonardobishop.quests.bukkit.hook.versionspecific.VersionSpecificHandler20;
+import com.leonardobishop.quests.bukkit.hook.versionspecific.VersionSpecificHandler8;
+import com.leonardobishop.quests.bukkit.hook.versionspecific.VersionSpecificHandler9;
 import com.leonardobishop.quests.bukkit.item.ParsedQuestItem;
 import com.leonardobishop.quests.bukkit.item.QuestItem;
 import com.leonardobishop.quests.bukkit.item.QuestItemRegistry;
@@ -30,11 +48,66 @@ import com.leonardobishop.quests.bukkit.menu.itemstack.QItemStackRegistry;
 import com.leonardobishop.quests.bukkit.questcompleter.BukkitQuestCompleter;
 import com.leonardobishop.quests.bukkit.questcontroller.NormalQuestController;
 import com.leonardobishop.quests.bukkit.runnable.QuestsAutoSaveRunnable;
+import com.leonardobishop.quests.bukkit.scheduler.ServerScheduler;
+import com.leonardobishop.quests.bukkit.scheduler.WrappedTask;
+import com.leonardobishop.quests.bukkit.scheduler.bukkit.BukkitServerSchedulerAdapter;
+import com.leonardobishop.quests.bukkit.scheduler.folia.FoliaServerScheduler;
 import com.leonardobishop.quests.bukkit.storage.MySqlStorageProvider;
 import com.leonardobishop.quests.bukkit.storage.YamlStorageProvider;
 import com.leonardobishop.quests.bukkit.tasktype.BukkitTaskTypeManager;
-import com.leonardobishop.quests.bukkit.tasktype.type.*;
-import com.leonardobishop.quests.bukkit.tasktype.type.dependent.*;
+import com.leonardobishop.quests.bukkit.tasktype.type.BlockItemdroppingTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.BlockshearingTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.BreedingTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.BrewingTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.BucketEmptyTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.BucketFillTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.BuildingTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.CommandTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.ConsumeTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.CraftingTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.DealDamageTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.DistancefromTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.EnchantingTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.ExpEarnTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.FarmingTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.FishingTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.InteractTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.InventoryTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.MilkingTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.MiningTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.MobkillingTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.PermissionTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.PlayerkillingTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.PlaytimeTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.PositionTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.ProjectilelaunchingTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.ReplenishingTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.ShearingTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.SmeltingTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.SmithingTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.TamingTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.WalkingTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.dependent.ASkyBlockLevelTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.dependent.BentoBoxLevelTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.dependent.CitizensDeliverTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.dependent.CitizensInteractTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.dependent.EcoBossesKillingTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.dependent.EssentialsBalanceTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.dependent.EssentialsMoneyEarnTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.dependent.FabledSkyblockLevelTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.dependent.IridiumSkyblockValueTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.dependent.MythicMobsKillingTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.dependent.NuVotifierVoteTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.dependent.PlaceholderAPIEvaluateTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.dependent.PlayerPointsEarnTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.dependent.PyroFishingProFishingTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.dependent.ShopGUIPlusBuyTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.dependent.ShopGUIPlusSellTaskType;
+import com.leonardobishop.quests.bukkit.tasktype.type.dependent.SuperiorSkyblockLevelType;
+import com.leonardobishop.quests.bukkit.tasktype.type.dependent.SuperiorSkyblockWorthType;
+import com.leonardobishop.quests.bukkit.tasktype.type.dependent.VotingPluginVoteType;
+import com.leonardobishop.quests.bukkit.tasktype.type.dependent.uSkyBlockLevelTaskType;
+import com.leonardobishop.quests.bukkit.util.CompatUtils;
 import com.leonardobishop.quests.bukkit.util.LogHistory;
 import com.leonardobishop.quests.common.config.ConfigProblem;
 import com.leonardobishop.quests.common.config.ConfigProblemDescriptions;
@@ -46,25 +119,33 @@ import com.leonardobishop.quests.common.plugin.Quests;
 import com.leonardobishop.quests.common.quest.QuestCompleter;
 import com.leonardobishop.quests.common.quest.QuestManager;
 import com.leonardobishop.quests.common.questcontroller.QuestController;
-import com.leonardobishop.quests.common.scheduler.ServerScheduler;
 import com.leonardobishop.quests.common.storage.StorageProvider;
 import com.leonardobishop.quests.common.tasktype.TaskType;
 import com.leonardobishop.quests.common.tasktype.TaskTypeManager;
 import com.leonardobishop.quests.common.updater.Updater;
+import com.mojang.authlib.GameProfile;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.BaseComponent;
 import org.bstats.bukkit.MetricsLite;
 import org.bukkit.Bukkit;
 import org.bukkit.block.Block;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarFlag;
+import org.bukkit.boss.BarStyle;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -79,7 +160,7 @@ public class BukkitQuestsPlugin extends JavaPlugin implements Quests {
     private TaskTypeManager taskTypeManager;
     private QPlayerManager qPlayerManager;
     private QuestController questController;
-    private QuestCompleter questCompleter;
+    private BukkitQuestCompleter questCompleter;
     private BukkitQuestsConfig questsConfig;
     private Updater updater;
     private ServerScheduler serverScheduler;
@@ -96,12 +177,15 @@ public class BukkitQuestsPlugin extends JavaPlugin implements Quests {
     private AbstractEssentialsHook essentialsHook;
     private AbstractPlayerBlockTrackerHook playerBlockTrackerHook;
     private ItemGetter itemGetter;
-    private Title titleHandle;
+    private SkullGetter skullGetter;
+    private QuestsTitle titleHandle;
+    private QuestsBossBar bossBarHandle;
+    private QuestsActionBar actionBarHandle;
     private VersionSpecificHandler versionSpecificHandler;
 
     private LogHistory logHistory;
-    private BukkitTask questAutoSaveTask;
-    private BukkitTask questQueuePollTask;
+    private WrappedTask questAutoSaveTask;
+    private WrappedTask questQueuePollTask;
     private BiFunction<Player, String, String> placeholderAPIProcessor;
 
     @Override
@@ -162,7 +246,9 @@ public class BukkitQuestsPlugin extends JavaPlugin implements Quests {
         this.generateConfigurations();
         this.questsConfig = new BukkitQuestsConfig(new File(super.getDataFolder() + File.separator + "config.yml"));
         this.questManager = new QuestManager(this);
-        this.serverScheduler = new BukkitServerSchedulerAdapter(this);
+
+        this.serverScheduler = FoliaServerScheduler.FOLIA ? new FoliaServerScheduler(this) : new BukkitServerSchedulerAdapter(this);
+        questsLogger.info("Running server scheduler: " + serverScheduler.getServerSchedulerName());
 
         // Load base configuration for use during rest of startup procedure
         if (!this.reloadBaseConfiguration()) {
@@ -198,28 +284,29 @@ public class BukkitQuestsPlugin extends JavaPlugin implements Quests {
         // Setup version specific compatibility layers
         int version;
         try {
-            version = Integer.parseInt(Bukkit.getServer().getClass().getPackage().getName().replace(".", ",").split(",")[3].split("_")[1]);
+            version = Integer.parseInt(super.getServer().getBukkitVersion().split("\\.", 3)[1]);
         } catch (ArrayIndexOutOfBoundsException | NumberFormatException e) {
             questsLogger.warning("Failed to resolve server version - some features may not work!");
             version = 0;
         }
+
         questsLogger.info("Your server is running version 1." + version);
+
         // (titles)
-        if (version < 8) {
-            titleHandle = new Title_Other();
-        } else if (version <= 10) {
-            titleHandle = new Title_BukkitNoTimings();
-        } else {
-            titleHandle = new Title_Bukkit();
-        }
+        setTitleHandle();
+
+        // (bossbar)
+        setBossBarHandle();
+
+        // (actionbar)
+        setActionBarHandle();
+
         // (itemstacks)
-        if (version <= 12) {
-            itemGetter = new ItemGetter_Late_1_8();
-        } else if (version == 13) {
-            itemGetter = new ItemGetter_1_13();
-        } else {
-            itemGetter = new ItemGetterLatest();
-        }
+        setItemGetter();
+
+        // (skulls)
+        setSkullGetter();
+
         // (version specific handler)
         // TODO move above to version specific handlers
         if (version <= 8) {
@@ -228,7 +315,8 @@ public class BukkitQuestsPlugin extends JavaPlugin implements Quests {
             case 9, 10 -> versionSpecificHandler = new VersionSpecificHandler9();
             case 11, 12, 13, 14, 15 -> versionSpecificHandler = new VersionSpecificHandler11();
             case 16 -> versionSpecificHandler = new VersionSpecificHandler16();
-            default -> versionSpecificHandler = new VersionSpecificHandler17();
+            case 17, 18, 19 -> versionSpecificHandler = new VersionSpecificHandler17();
+            default -> versionSpecificHandler = new VersionSpecificHandler20();
         }
 
         questsConfig.setItemGetter(itemGetter);
@@ -271,19 +359,22 @@ public class BukkitQuestsPlugin extends JavaPlugin implements Quests {
         super.getServer().getPluginManager().registerEvents(new PlayerLeaveListener(this), this);
 
         // Register task types after the server has fully started
-        Bukkit.getScheduler().runTask(this, () -> {
+        getScheduler().doSync(() -> {
             // Setup external plugin hooks
-            if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            if (CompatUtils.isPluginEnabled("PlaceholderAPI")) {
                 this.placeholderAPIHook = new PlaceholderAPIHook();
                 this.placeholderAPIHook.registerExpansion(this);
                 this.placeholderAPIProcessor = (player, s) -> placeholderAPIHook.replacePlaceholders(player, s);
             }
-            if (Bukkit.getPluginManager().isPluginEnabled("CoreProtect")) {
+
+            if (CompatUtils.isPluginEnabled("CoreProtect")) {
                 this.coreProtectHook = new CoreProtectHook(this);
             }
-            if (Bukkit.getPluginManager().isPluginEnabled("Essentials")) {
+
+            if (CompatUtils.isPluginEnabled("Essentials")) {
                 this.essentialsHook = new EssentialsHook();
             }
+
             try {
                 String className = questsConfig.getString("options.playerblocktracker-class-name", "com.gestankbratwurst.playerblocktracker.PlayerBlockTracker");
 
@@ -294,117 +385,84 @@ public class BukkitQuestsPlugin extends JavaPlugin implements Quests {
             } catch (ClassCastException | ClassNotFoundException | NoSuchMethodException ignored) {
             }
 
-            taskTypeManager.registerTaskType(new MiningTaskType(this));
-            taskTypeManager.registerTaskType(new BuildingTaskType(this));
-            taskTypeManager.registerTaskType(new MobkillingTaskType(this));
-            taskTypeManager.registerTaskType(new PlayerkillingTaskType(this));
-            taskTypeManager.registerTaskType(new FishingTaskType(this));
-            taskTypeManager.registerTaskType(new SmeltingTaskType(this));
-            taskTypeManager.registerTaskType(new InventoryTaskType(this));
-            taskTypeManager.registerTaskType(new ConsumeTaskType(this));
-            taskTypeManager.registerTaskType(new WalkingTaskType(this));
-            taskTypeManager.registerTaskType(new TamingTaskType(this));
-            taskTypeManager.registerTaskType(new MilkingTaskType(this));
-            taskTypeManager.registerTaskType(new ShearingTaskType(this));
-            taskTypeManager.registerTaskType(new PositionTaskType(this));
-            taskTypeManager.registerTaskType(new PlaytimeTaskType(this));
-            taskTypeManager.registerTaskType(new ExpEarnTaskType(this));
+            // Register task types without compatibility requirement
             taskTypeManager.registerTaskType(new BreedingTaskType(this));
-            taskTypeManager.registerTaskType(new EnchantingTaskType(this));
-            taskTypeManager.registerTaskType(new DealDamageTaskType(this));
-            taskTypeManager.registerTaskType(new PermissionTaskType(this));
-            taskTypeManager.registerTaskType(new DistancefromTaskType(this));
-            taskTypeManager.registerTaskType(new CommandTaskType(this));
-            taskTypeManager.registerTaskType(new CraftingTaskType(this));
             taskTypeManager.registerTaskType(new BucketEmptyTaskType(this));
             taskTypeManager.registerTaskType(new BucketFillTaskType(this));
+            taskTypeManager.registerTaskType(new BuildingTaskType(this));
+            taskTypeManager.registerTaskType(new CommandTaskType(this));
+            taskTypeManager.registerTaskType(new ConsumeTaskType(this));
+            taskTypeManager.registerTaskType(new CraftingTaskType(this));
+            taskTypeManager.registerTaskType(new DealDamageTaskType(this));
+            taskTypeManager.registerTaskType(new DistancefromTaskType(this));
+            taskTypeManager.registerTaskType(new EnchantingTaskType(this));
+            taskTypeManager.registerTaskType(new ExpEarnTaskType(this));
+            taskTypeManager.registerTaskType(new FishingTaskType(this));
             taskTypeManager.registerTaskType(new InteractTaskType(this));
-            try {
-                Class.forName("org.bukkit.event.inventory.BrewEvent").getMethod("getResults");
-                taskTypeManager.registerTaskType(new BrewingTaskType(this));
-            } catch (ClassNotFoundException | NoSuchMethodException ignored) { } // server version cannot support task type
-            try {
-                Class.forName("org.bukkit.event.inventory.SmithItemEvent");
-                taskTypeManager.registerTaskType(new SmithingTaskType(this));
-            } catch (ClassNotFoundException ignored) { } // server version cannot support task type
-            // TODO: FIX
-            // taskTypeManager.registerTaskType(new BrewingCertainTaskType());
-            try {
-                Class.forName("org.bukkit.block.data.Ageable");
-                taskTypeManager.registerTaskType(new FarmingTaskType(this));
-            } catch (ClassNotFoundException ignored) { } // server version cannot support task type
-            try {
-                Class.forName("io.papermc.paper.event.block.PlayerShearBlockEvent");
-                taskTypeManager.registerTaskType(new BlockshearingTaskType(this));
-            } catch (ClassNotFoundException ignored) { } // server version cannot support task type
-            try {
-                Class.forName("com.destroystokyo.paper.loottable.LootableInventoryReplenishEvent");
-                taskTypeManager.registerTaskType(new ReplenishingTaskType(this));
-            } catch (ClassNotFoundException ignored) { } // server version cannot support task type
-            if (Bukkit.getPluginManager().isPluginEnabled("ASkyBlock")) {
-                taskTypeManager.registerTaskType(new ASkyBlockLevelTaskType(this));
-            }
+            taskTypeManager.registerTaskType(new InventoryTaskType(this));
+            taskTypeManager.registerTaskType(new MilkingTaskType(this));
+            taskTypeManager.registerTaskType(new MiningTaskType(this));
+            taskTypeManager.registerTaskType(new MobkillingTaskType(this));
+            taskTypeManager.registerTaskType(new PermissionTaskType(this));
+            taskTypeManager.registerTaskType(new PlayerkillingTaskType(this));
+            taskTypeManager.registerTaskType(new PlaytimeTaskType(this));
+            taskTypeManager.registerTaskType(new PositionTaskType(this));
+            taskTypeManager.registerTaskType(new ProjectilelaunchingTaskType(this));
+            taskTypeManager.registerTaskType(new ShearingTaskType(this));
+            taskTypeManager.registerTaskType(new SmeltingTaskType(this));
+            taskTypeManager.registerTaskType(new TamingTaskType(this));
+            taskTypeManager.registerTaskType(new WalkingTaskType(this));
+
+            // Register task types with class/method compatibility requirement
+            taskTypeManager.registerTaskType(() -> new BrewingTaskType(this), () -> CompatUtils.classWithMethodExists("org.bukkit.event.inventory.BrewEvent", "getResults"));
+            taskTypeManager.registerTaskType(() -> new SmithingTaskType(this), () -> CompatUtils.classExists("org.bukkit.event.inventory.SmithItemEvent"));
+            taskTypeManager.registerTaskType(() -> new FarmingTaskType(this), () -> CompatUtils.classExists("org.bukkit.block.data.Ageable"));
+            taskTypeManager.registerTaskType(() -> new BlockshearingTaskType(this), () -> CompatUtils.classExists("io.papermc.paper.event.block.PlayerShearBlockEvent"));
+            taskTypeManager.registerTaskType(() -> new ReplenishingTaskType(this), () -> CompatUtils.classExists("com.destroystokyo.paper.loottable.LootableInventoryReplenishEvent"));
+            taskTypeManager.registerTaskType(() -> new BlockItemdroppingTaskType(this), () -> CompatUtils.classExists("org.bukkit.event.block.BlockDropItemEvent"));
+
+            // Register task types with enabled plugin compatibility requirement
+            taskTypeManager.registerTaskType(() -> new ASkyBlockLevelTaskType(this), () -> CompatUtils.isPluginEnabled("ASkyBlock"));
+            taskTypeManager.registerTaskType(() -> new CitizensDeliverTaskType(this), () -> CompatUtils.isPluginEnabled("Citizens"));
+            taskTypeManager.registerTaskType(() -> new CitizensInteractTaskType(this), () -> CompatUtils.isPluginEnabled("Citizens"));
+            taskTypeManager.registerTaskType(() -> new EcoBossesKillingTaskType(this), () -> CompatUtils.isPluginEnabled("EcoBosses"));
+            taskTypeManager.registerTaskType(() -> new EssentialsBalanceTaskType(this), () -> CompatUtils.isPluginEnabled("Essentials"));
+            taskTypeManager.registerTaskType(() -> new EssentialsMoneyEarnTaskType(this), () -> CompatUtils.isPluginEnabled("Essentials"));
+            taskTypeManager.registerTaskType(() -> new FabledSkyblockLevelTaskType(this), () -> CompatUtils.isPluginEnabled("FabledSkyblock")); // not tested
+            taskTypeManager.registerTaskType(() -> new PlaceholderAPIEvaluateTaskType(this), () -> CompatUtils.isPluginEnabled("PlaceholderAPI"));
+            taskTypeManager.registerTaskType(() -> new PlayerPointsEarnTaskType(this), () -> CompatUtils.isPluginEnabled("PlayerPoints"));
+            taskTypeManager.registerTaskType(() -> new PyroFishingProFishingTaskType(this), () -> CompatUtils.isPluginEnabled("PyroFishingPro") && CompatUtils.classExists("me.arsmagica.API.PyroFishCatchEvent"));
+            taskTypeManager.registerTaskType(() -> new ShopGUIPlusBuyTaskType(this), () -> CompatUtils.isPluginEnabled("ShopGUIPlus")); // not tested
+            taskTypeManager.registerTaskType(() -> new ShopGUIPlusSellTaskType(this), () -> CompatUtils.isPluginEnabled("ShopGUIPlus")); // not tested
+            taskTypeManager.registerTaskType(() -> new SuperiorSkyblockLevelType(this), () -> CompatUtils.isPluginEnabled("SuperiorSkyblock2")); // not tested
+            taskTypeManager.registerTaskType(() -> new SuperiorSkyblockWorthType(this), () -> CompatUtils.isPluginEnabled("SuperiorSkyblock2")); // not tested
+            taskTypeManager.registerTaskType(() -> new uSkyBlockLevelTaskType(this), () -> CompatUtils.isPluginEnabled("uSkyBlock"));
+            taskTypeManager.registerTaskType(() -> new NuVotifierVoteTaskType(this), () -> CompatUtils.isPluginEnabled("Votifier")); // not tested
+            taskTypeManager.registerTaskType(() -> new VotingPluginVoteType(this), () -> CompatUtils.isPluginEnabled("VotingPlugin")); // not tested
+
+            // Register task types with enabled specific version plugin compatibility requirement
+            taskTypeManager.registerTaskType(() -> new IridiumSkyblockValueTaskType(this), () -> { // TODO FIX
+                String pluginVersion = CompatUtils.getPluginVersion("IridiumSkyblock");
+                return pluginVersion != null && pluginVersion.startsWith("2");
+            });
+            taskTypeManager.registerTaskType(() -> new MythicMobsKillingTaskType(this), () -> {
+                String pluginVersion = CompatUtils.getPluginVersion("MythicMobs");
+                return pluginVersion != null && (pluginVersion.startsWith("4") || pluginVersion.startsWith("5"));
+            });
+
+            // Register task types with even more weird requirements
             if (Bukkit.getPluginManager().isPluginEnabled("BentoBox")) {
                 BentoBoxLevelTaskType.register(this, taskTypeManager);
             }
-            //TODO FIX
-            if (Bukkit.getPluginManager().isPluginEnabled("IridiumSkyblock")
-                    && Bukkit.getPluginManager().getPlugin("IridiumSkyblock").getDescription().getVersion().startsWith("2")) {
-                taskTypeManager.registerTaskType(new IridiumSkyblockValueTaskType(this));
-            }
-            if (Bukkit.getPluginManager().isPluginEnabled("uSkyBlock")) {
-                taskTypeManager.registerTaskType(new uSkyBlockLevelTaskType(this));
-            }
-            if (Bukkit.getPluginManager().isPluginEnabled("Citizens")) {
-                taskTypeManager.registerTaskType(new CitizensDeliverTaskType(this));
-                taskTypeManager.registerTaskType(new CitizensInteractTaskType(this));
-            }
-            if (Bukkit.getPluginManager().isPluginEnabled("MythicMobs")) {
-                String mythicMobsVersion = Bukkit.getPluginManager().getPlugin("MythicMobs").getDescription().getVersion();
-                if (mythicMobsVersion.startsWith("4") || mythicMobsVersion.startsWith("5")) {
-                    taskTypeManager.registerTaskType(new MythicMobsKillingTaskType(this, mythicMobsVersion));
-                }
-            }
-            if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
-                taskTypeManager.registerTaskType(new PlaceholderAPIEvaluateTaskType(this));
-            }
-            if (Bukkit.getPluginManager().isPluginEnabled("EcoBosses")) {
-                taskTypeManager.registerTaskType(new EcoBossesKillingTaskType(this));
-            }
-            if (Bukkit.getPluginManager().isPluginEnabled("Essentials")) {
-                taskTypeManager.registerTaskType(new EssentialsMoneyEarnTaskType(this));
-                taskTypeManager.registerTaskType(new EssentialsBalanceTaskType(this));
-            }
-            if (Bukkit.getPluginManager().isPluginEnabled("PlayerPoints")) {
-                taskTypeManager.registerTaskType(new PlayerPointsEarnTaskType(this));
-            }
-            if (Bukkit.getPluginManager().isPluginEnabled("ShopGUIPlus")) {
-                // not tested
-                String shopGUIPlusVersion = Bukkit.getPluginManager().getPlugin("ShopGUIPlus").getDescription().getVersion();
-                taskTypeManager.registerTaskType(new ShopGUIPlusBuyTaskType(this, shopGUIPlusVersion));
-                taskTypeManager.registerTaskType(new ShopGUIPlusSellTaskType(this, shopGUIPlusVersion));
-            }
-            if (Bukkit.getPluginManager().isPluginEnabled("FabledSkyblock")) {
-                // not tested
-                taskTypeManager.registerTaskType(new FabledSkyblockLevelTaskType(this));
-            }
-            if (Bukkit.getPluginManager().isPluginEnabled("SuperiorSkyblock2")) {
-                // not tested
-                taskTypeManager.registerTaskType(new SuperiorSkyblockLevelType(this));
-                taskTypeManager.registerTaskType(new SuperiorSkyblockWorthType(this));
-            }
-            if (Bukkit.getPluginManager().isPluginEnabled("VotingPlugin")) {
-                // not tested
-                taskTypeManager.registerTaskType(new VotingPluginVoteType(this));
-            }
-            if (Bukkit.getPluginManager().isPluginEnabled("Votifier")) {
-                // not tested
-                taskTypeManager.registerTaskType(new NuVotifierVoteTaskType(this));
-            }
 
+            // Close task type registrations
             taskTypeManager.closeRegistrations();
-            questsLogger.info(taskTypeManager.getTaskTypes().size() + " task types have been registered"
-                    + (taskTypeManager.getSkipped() > 0 ? " (" + taskTypeManager.getSkipped() + " skipped due to exclusions or conflicting names)." : "."));
+
+            // Inform about registered task types
+            String registrationMessage = taskTypeManager.getTaskTypes().size() + " task types have been registered";
+            int skipped = taskTypeManager.getSkipped();
+            registrationMessage += (skipped > 0) ? " (" + skipped + " skipped due to exclusions or conflicting names)." : ".";
+            questsLogger.info(registrationMessage);
 
             if (playerBlockTrackerHook != null) {
                 this.playerBlockTrackerHook.fixPlayerBlockTracker();
@@ -448,6 +506,8 @@ public class BukkitQuestsPlugin extends JavaPlugin implements Quests {
         try {
             qPlayerManager.getStorageProvider().shutdown();
         } catch (Exception ignored) { }
+
+        serverScheduler.cancelAllTasks();
     }
 
     @Override
@@ -478,7 +538,6 @@ public class BukkitQuestsPlugin extends JavaPlugin implements Quests {
         return new ParsedQuestItem("defined", null, getConfiguredItemStack(path, config, excludes));
     }
 
-
     public ItemStack getConfiguredItemStack(String path, ConfigurationSection config, ItemGetter.Filter... excludes) {
         return itemGetter.getItem(path, config, excludes);
     }
@@ -502,7 +561,7 @@ public class BukkitQuestsPlugin extends JavaPlugin implements Quests {
             long autoSaveInterval = this.getConfig().getLong("options.performance-tweaking.quest-autosave-interval", 12000);
             try {
                 if (questAutoSaveTask != null) questAutoSaveTask.cancel();
-                questAutoSaveTask = Bukkit.getScheduler().runTaskTimer(this, () -> new QuestsAutoSaveRunnable(this), autoSaveInterval, autoSaveInterval);
+                questAutoSaveTask = new QuestsAutoSaveRunnable(this).runTaskTimer(getScheduler(), autoSaveInterval, autoSaveInterval);
             } catch (Exception ex) {
                 questsLogger.debug("Cannot cancel and restart quest autosave task");
             }
@@ -510,7 +569,7 @@ public class BukkitQuestsPlugin extends JavaPlugin implements Quests {
             long queueExecuteInterval = this.getConfig().getLong("options.performance-tweaking.quest-queue-executor-interval", 1);
             try {
                 if (questQueuePollTask != null) questQueuePollTask.cancel();
-                questQueuePollTask = Bukkit.getScheduler().runTaskTimer(this, (BukkitQuestCompleter) questCompleter, queueExecuteInterval, queueExecuteInterval);
+                questQueuePollTask = serverScheduler.runTaskTimer(questCompleter, queueExecuteInterval, queueExecuteInterval);
             } catch (Exception ex) {
                 questsLogger.debug("Cannot cancel and restart queue executor task");
             }
@@ -578,6 +637,94 @@ public class BukkitQuestsPlugin extends JavaPlugin implements Quests {
         }
     }
 
+    private void setTitleHandle() {
+        try {
+            Player.class.getMethod("sendTitle", String.class, String.class, int.class, int.class, int.class);
+            titleHandle = new Title_Bukkit();
+            return;
+        } catch (NoSuchMethodException ignored) {
+        }
+
+        try {
+            Player.class.getMethod("sendTitle", String.class, String.class);
+            titleHandle = new Title_BukkitNoTimings();
+            return;
+        } catch (NoSuchMethodException ignored) {
+        }
+
+        titleHandle = new Title_Nothing();
+    }
+
+    private void setBossBarHandle() {
+        try {
+            Bukkit.class.getMethod("createBossBar", String.class, BarColor.class, BarStyle.class, BarFlag[].class);
+            bossBarHandle = new BossBar_Bukkit(this);
+            return;
+        } catch (NoSuchMethodException ignored) {
+        }
+
+        bossBarHandle = new BossBar_Nothing();
+    }
+
+    @SuppressWarnings("deprecation")
+    private void setActionBarHandle() {
+        try {
+            Player.class.getMethod("sendActionBar", String.class);
+            actionBarHandle = new ActionBar_Paper();
+            return;
+        } catch (NoSuchMethodException ignored) {
+        }
+
+        try {
+            Player.Spigot.class.getMethod("sendMessage", ChatMessageType.class, BaseComponent.class);
+            actionBarHandle = new ActionBar_Spigot();
+            return;
+        } catch (NoSuchMethodException ignored) {
+        }
+
+        actionBarHandle = new ActionBar_Nothing();
+    }
+
+    private void setItemGetter() {
+        // Spigot 1.14+
+        if (CompatUtils.classWithMethodExists("org.bukkit.inventory.meta.ItemMeta", "setCustomModelData", Integer.class)) {
+            itemGetter = new ItemGetter14(this);
+            return;
+        }
+
+        // Spigot 1.13+
+        if (CompatUtils.classWithMethodExists("org.bukkit.inventory.meta.ItemMeta", "getAttributeModifiers")) {
+            itemGetter = new ItemGetter13(this);
+            return;
+        }
+
+        // Spigot 1.8+
+        itemGetter = new ItemGetter8(this);
+    }
+
+    private void setSkullGetter() {
+        // Paper 1.12+
+        if (CompatUtils.classExists("com.destroystokyo.paper.profile.PlayerProfile")) {
+            skullGetter = new PaperSkullGetter(this);
+            return;
+        }
+
+        if (CompatUtils.classWithMethodExists("org.bukkit.craftbukkit.{}.inventory.CraftMetaSkull", "setProfile", GameProfile.class)) {
+            // Spigot 1.18.1+
+            if (CompatUtils.classExists("org.bukkit.profile.PlayerProfile")) {
+                skullGetter = new ModernSkullGetter(this);
+                return;
+            }
+
+            // Spigot 1.15.1+
+            skullGetter = new BukkitSkullGetter(this);
+            return;
+        }
+
+        // Spigot 1.8+
+        skullGetter = new LegacySkullGetter(this);
+    }
+
     public boolean isValidConfiguration() {
         return validConfiguration;
     }
@@ -610,8 +757,20 @@ public class BukkitQuestsPlugin extends JavaPlugin implements Quests {
         return itemGetter;
     }
 
-    public Title getTitleHandle() {
+    public SkullGetter getSkullGetter() {
+        return skullGetter;
+    }
+
+    public QuestsTitle getTitleHandle() {
         return titleHandle;
+    }
+
+    public QuestsBossBar getBossBarHandle() {
+        return bossBarHandle;
+    }
+
+    public QuestsActionBar getActionBarHandle() {
+        return actionBarHandle;
     }
 
     public VersionSpecificHandler getVersionSpecificHandler() {
