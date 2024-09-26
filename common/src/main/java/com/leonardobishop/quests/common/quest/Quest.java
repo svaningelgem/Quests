@@ -20,8 +20,12 @@ public class Quest implements Comparable<Quest> {
     private List<String> requirements;
     private List<String> rewardString;
     private List<String> startString;
+    private List<String> cancelString;
+    private List<String> expiryString;
     private List<String> startCommands;
     private List<String> cancelCommands;
+    private List<String> expiryCommands;
+    private double vaultReward;
     private boolean repeatEnabled;
     private boolean cooldownEnabled;
     private int cooldown;
@@ -123,6 +127,26 @@ public class Quest implements Comparable<Quest> {
     }
 
     /**
+     * Get the cancel string of the quest.
+     * The cancel string is a series of messages sent to the player upon cancelling the quest.
+     *
+     * @return immutable list of messages to send
+     */
+    public @NotNull List<String> getCancelString() {
+        return Collections.unmodifiableList(cancelString);
+    }
+
+    /**
+     * Get the expiry string of the quest.
+     * The expiry string is a series of messages sent to the player upon expiring the quest.
+     *
+     * @return immutable list of messages to send
+     */
+    public @NotNull List<String> getExpiryString() {
+        return Collections.unmodifiableList(expiryString);
+    }
+
+    /**
      * Get the id of this quest.
      *
      * @return id
@@ -170,6 +194,26 @@ public class Quest implements Comparable<Quest> {
      */
     public List<String> getCancelCommands() {
         return Collections.unmodifiableList(cancelCommands);
+    }
+
+    /**
+     * Get the expiry commands for this quest.
+     * The expiry commands is a list of commands to be executed upon expiring the quest.
+     *
+     * @return immutable list of commands
+     */
+    public List<String> getExpiryCommands() {
+        return Collections.unmodifiableList(expiryCommands);
+    }
+
+    /**
+     * Get the Vault reward for this quest.
+     * The Vault reward is an amount of Vault economy money to be given upon completing the quest.
+     *
+     * @return double
+     */
+    public double getVaultReward() {
+        return this.vaultReward;
     }
 
     /**
@@ -304,8 +348,12 @@ public class Quest implements Comparable<Quest> {
         private List<String> requirements = Collections.emptyList();
         private List<String> rewardString = Collections.emptyList();
         private List<String> startString = Collections.emptyList();
+        private List<String> cancelString = Collections.emptyList();
+        private List<String> expiryString = Collections.emptyList();
         private List<String> startCommands = Collections.emptyList();
         private List<String> cancelCommands = Collections.emptyList();
+        private List<String> expiryCommands = Collections.emptyList();
+        private double vaultReward = 0.0D;
         private boolean repeatEnabled = false;
         private boolean cooldownEnabled = false;
         private int cooldown = 0;
@@ -344,6 +392,16 @@ public class Quest implements Comparable<Quest> {
             return this;
         }
 
+        public Builder withCancelString(List<String> cancelString) {
+            this.cancelString = cancelString;
+            return this;
+        }
+
+        public Builder withExpiryString(List<String> expiryString) {
+            this.expiryString = expiryString;
+            return this;
+        }
+
         public Builder withStartCommands(List<String> startCommands) {
             this.startCommands = startCommands;
             return this;
@@ -351,6 +409,16 @@ public class Quest implements Comparable<Quest> {
 
         public Builder withCancelCommands(List<String> cancelCommands) {
             this.cancelCommands = cancelCommands;
+            return this;
+        }
+
+        public Builder withExpiryCommands(List<String> expiryCommands) {
+            this.expiryCommands = expiryCommands;
+            return this;
+        }
+
+        public Builder withVaultReward(double vaultReward) {
+            this.vaultReward = vaultReward;
             return this;
         }
 
@@ -426,8 +494,12 @@ public class Quest implements Comparable<Quest> {
             quest.requirements = this.requirements;
             quest.rewardString = this.rewardString;
             quest.startString = this.startString;
+            quest.cancelString = this.cancelString;
+            quest.expiryString = this.expiryString;
             quest.startCommands = this.startCommands;
             quest.cancelCommands = this.cancelCommands;
+            quest.expiryCommands = this.expiryCommands;
+            quest.vaultReward = this.vaultReward;
             quest.repeatEnabled = this.repeatEnabled;
             quest.cooldownEnabled = this.cooldownEnabled;
             quest.cooldown = this.cooldown;
@@ -441,9 +513,7 @@ public class Quest implements Comparable<Quest> {
             quest.placeholders = this.placeholders;
             quest.progressPlaceholders = this.progressPlaceholders;
             quest.categoryid = this.categoryid;
-
             return quest;
         }
-
     }
 }

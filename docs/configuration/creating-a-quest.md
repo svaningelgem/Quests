@@ -141,6 +141,34 @@ startcommands:
   - "broadcast {player} has started a quest"
 ```
 
+## Cancel commands
+
+
+*`cancelcommands`*
+
+**Optional.** This is a list of commands which will be executed when the
+player cancels the quest. You can use `{player}` and the player's name
+will be substituted in place.
+
+``` yaml
+cancelcommands:
+  - "broadcast {player} has cancelled a quest"
+```
+
+## Expiry commands
+
+
+*`expirycommands`*
+
+**Optional.** This is a list of commands which will be executed when the
+the player's quest expires. You can use `{player}` and the player's name
+will be substituted in place.
+
+``` yaml
+expirycommands:
+  - "broadcast {player}'s quest has expired"
+```
+
 ## Start string
 
   
@@ -155,6 +183,32 @@ startstring:
  - " &8- &7You must break 30 blocks."
 ```
 
+## Cancel string
+
+
+*`cancelstring`*
+
+**Optional.** This is a list of messages which will be sent to the
+player when they cancel the quest.
+
+``` yaml
+cancelstring:
+ - " &8- &7You cancelled the quest to break 30 blocks."
+```
+
+## Expiry string
+
+
+*`expirystring`*
+
+**Optional.** This is a list of messages which will be sent to the
+player when their quest has expired.
+
+``` yaml
+expirystring:
+ - " &8- &7The quest to break 30 blocks just expired."
+```
+
 ## Reward string
 
   
@@ -167,6 +221,18 @@ player their rewards.
 ``` yaml
 rewardstring:
  - " &8- &7You have received 10 dimaonds."
+```
+
+## Vault reward
+
+
+*`vaultreward`*
+
+**Optional.** The Vault reward is an amount of Vault economy money
+that will be given to the player when they complete the quest.
+
+``` yaml
+vaultreward: 600.0
 ```
 
 ## Placeholders
@@ -190,6 +256,37 @@ These placeholders will be called using PlaceholderAPI. See [quest
 progress in scoreboard](../guides/quest-progress-in-scoreboard) for a
 guide which utilises this feature.
 
+## Progress placeholders
+
+*`progress-placeholders`*
+
+**Optional.** This is a list of placeholders which represent the progress
+of each task. These are used by the [bossbar](/configuration/basic-options#bossbar)
+and [actionbar](/configuration/basic-options#actionbar) configuration options.
+
+You can define a placeholder for each task, or for all of them as a catch-all.
+
+```yaml
+progress-placeholders:
+  <task-name>: "Progress for <task-name>"
+  '*': "Progress for tasks not defined above"
+```
+
+For example, in an actual quest:
+
+```yaml
+tasks:
+  mining:
+    type: "blockbreak"
+    amount: 100
+  building:
+    type: "blockplace"
+    amount: 100
+# ... 
+progress-placeholders:
+  mining: "&f{mining:progress}/100 &7blocks broken"
+  building: "&f{building:progress}/100 &7blocks placed"
+```
 ## Options
 
   

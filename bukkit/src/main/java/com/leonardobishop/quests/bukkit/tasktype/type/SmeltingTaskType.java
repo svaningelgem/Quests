@@ -25,6 +25,9 @@ import org.bukkit.inventory.ItemStack;
 
 import java.math.RoundingMode;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 
 public final class SmeltingTaskType extends BukkitTaskType {
 
@@ -91,14 +94,15 @@ public final class SmeltingTaskType extends BukkitTaskType {
         }
 
         final InventoryType inventoryType = event.getInventory().getType();
+        final String inventoryTypeName = inventoryTypeNames.get(inventoryType);
 
         for (TaskUtils.PendingTask pendingTask : TaskUtils.getApplicableTasks(player, qPlayer, this, TaskConstraintSet.ALL)) {
             Quest quest = pendingTask.quest();
             Task task = pendingTask.task();
             TaskProgress taskProgress = pendingTask.taskProgress();
 
-            final String mode = (String) task.getConfigValue("mode");
-            if (mode != null && !inventoryType.name().equalsIgnoreCase(mode)) {
+            String mode = (String) task.getConfigValue("mode");
+            if (mode != null && !inventoryTypeName.equals(mode)) {
                 super.debug("Specific mode is required, but the actual mode '" + inventoryType + "' does not match, continuing...", quest.getId(), task.getId(), player.getUniqueId());
                 continue;
             }
@@ -131,7 +135,15 @@ public final class SmeltingTaskType extends BukkitTaskType {
                 taskProgress.setCompleted(true);
             }
 
-            TaskUtils.sendTrackAdvancement(player, quest, task, taskProgress, amount);
+            TaskUtils.sendTrackAdvancement(player, quest, task, pendingTask, amount);
         }
     }
+
+    private static final Map<InventoryType, String> inventoryTypeNames = new HashMap<>() {{
+        for (final InventoryType inventoryType : InventoryType.values()) {
+            final String name = inventoryType.name();
+            final String nameLowerCase = name.toLowerCase(Locale.ROOT);
+            this.put(inventoryType, nameLowerCase);
+        }
+    }};
 }

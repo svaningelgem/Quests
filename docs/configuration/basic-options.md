@@ -54,7 +54,10 @@ of rows) so that there are not any empty rows.
 ``` yaml
 options:
   # ...
-  trim-gui-size: true
+  trim-gui-size:
+    quests-category-menu: true
+    quests-menu: true
+    quests-started-menu: true
 ```
 
 ## Titles enabled
@@ -69,6 +72,61 @@ quests.
 options:
   # ...
   titles-enabled: true
+```
+
+## Bossbar
+
+*`options.bossbar`*
+
+This configures a temporary bossbar which will appear when a player
+makes progress on a task, or completes a task. The bar itself
+represents the percentage done for a task.
+
+The text displayed will be the [progress placeholder](/configuration/creating-a-quest#progress-placeholders)
+for the task. In the future, there will also be a method to
+automatically generate this text.
+
+```yaml
+options:
+  # ...
+  bossbar:
+    # Enable bossbar for task progress
+    progress: false
+    # Enable bossbar for task completions
+    complete: false
+    # Time in seconds to display bossbar
+    time: 5
+    # See https://hub.spigotmc.org/javadocs/spigot/org/bukkit/boss/BarColor.html
+    color:
+      '0.0': BLUE # for 0.0 and higher progress values (progress is always between 0.0 and 1.0)
+    # See https://hub.spigotmc.org/javadocs/spigot/org/bukkit/boss/BarStyle.html
+    style:
+      '0.0': SOLID # for 0.0 and higher progress values (progress is always between 0.0 and 1.0)
+    # Max amount of active task progress boss bars at once
+    limit: -1
+    # Whether new boss bar should be added and make another (the least progress one - if exists) disappear
+    replace-on-limit: true
+```
+
+## Actionbar
+
+*`options.actionbar`*
+
+This configures a temporary action bar which will appear when a player
+makes progress on a task, or completes a task. 
+
+The text displayed will be the [progress placeholder](/configuration/creating-a-quest#progress-placeholders)
+for the task. In the future, there will also be a method to
+automatically generate this text.
+
+```yaml
+options:
+  # ...
+  actionbar:
+    # Enable actionbar for task progress
+    progress: false
+    # Enable actionbar for task completions
+    complete: false
 ```
 
 ## Quest started limit
@@ -225,6 +283,18 @@ list](https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Sound.html)
 list](https://helpch.at/docs/1.8.8/index.html?org/bukkit/Sound.html)
 (1.8).
 
+An alternative syntax is available for 
+[namespaced sound names](https://www.digminecraft.com/lists/sound_list_pc.php):
+
+``` yaml
+options:
+  # ...
+  sounds:
+    quest-start: "(minecraft:entity.player.levelup):2:3"
+    # ...
+```
+
+
 To not have a sound play, you can leave the string blank (i.e. `""`),
 for example:
 
@@ -243,6 +313,9 @@ player, not the actual volume played back on the client.
 
 **Example (1.9+):** `ENTITY_PLAYER_LEVELUP:2:3` -\> sound
 `ENTITY_PLAYER_LEVELUP` at pitch `2` with a volume of `3`.
+
+**Example (namespaced sound):** `(minecraft:entity.player.levelup):2:3` -\> sound
+`minecraft:entity.player.levelup` at pitch `2` with a volume of `3`.
 
 ## GUI hide locked
 
@@ -401,14 +474,68 @@ options:
   
 *`options.quests-use-placeholderapi`*
 
-Choose whether or not start strings, reward strings, reward commands and
-start commands are parsed with PlaceholderAPI. This is disabled by
-default for performance reasons.
+Replace placeholders from PlaceholderAPI in rewards, rewardstrings 
+and start strings.
 
 ``` yaml
 options:
   # ...
   quests-use-placeholderapi: false
+```
+
+## Progress use PlaceholderAPI
+
+
+*`options.progress-use-placeholderapi`*
+
+Replace placeholders from PlaceholderAPI in boss bar and action bar 
+progress strings
+
+``` yaml
+options:
+  # ...
+  progress-use-placeholderapi: false
+```
+
+## Use progress as fallback
+
+
+*`options.use-progress-as-fallback`*
+
+If true, the `progress` string from the placeholders section in quests
+will  be used as a fallback in the boss bar and action bar if the
+`progress-placeholders` option is not set. 
+
+``` yaml
+options:
+  # ...
+  use-progress-as-fallback: true
+```
+
+## PlayerBlockTracker class name
+
+
+*`options.playerblocktracker-class-name`*
+
+The name of the PlayerBlockTracker class to use for the hook. 
+
+``` yaml
+options:
+  # ...
+  playerblocktracker-class-name: "com.gestankbratwurst.playerblocktracker.PlayerBlockTracker"
+```
+
+## PlaceholderAPI global refresh ticks
+
+
+*`options.placeholderapi-global-refresh-ticks`*
+
+How frequently `placeholderapi_evaluate` task placeholders will refresh.
+
+``` yaml
+options:
+  # ...
+  placeholderapi-global-refresh-ticks: 30
 ```
 
 ## Verify quest exists on load
@@ -566,4 +693,31 @@ options:
         maximum-lifetime: 1800000
         connection-timeout: 5000
       table-prefix: "quests_"
+```
+
+## Number formats
+
+
+*`number-formats`*
+
+Configure how Quests will display different types of numbers used in placeholders. Most common locales are:
+- `de-DE`: `1.234,56`
+- `en-US`: `1,234.56`
+- `fr-ch`: `1'234,56`
+
+Java docs for internals used to handle number formats:
+- [DecimalFormat](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/text/DecimalFormat.html)
+- [DecimalFormatSymbols](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/text/DecimalFormatSymbols.html)
+- [Locale](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Locale.html)
+
+``` yaml
+number-formats:
+  # decimal format used for processing float, double and BigDecimal placeholders
+  floating:
+    format: '#,##0.00'
+    locale: 'en-US'
+  # decimal format used for processing int, long and BigInteger placeholders
+  integral:
+    format: '#,##0'
+    locale: 'en-US'
 ```

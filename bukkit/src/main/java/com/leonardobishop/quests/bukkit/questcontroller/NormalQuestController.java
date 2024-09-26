@@ -10,7 +10,7 @@ import com.leonardobishop.quests.bukkit.api.event.PlayerStopTrackQuestEvent;
 import com.leonardobishop.quests.bukkit.api.event.PreStartQuestEvent;
 import com.leonardobishop.quests.bukkit.config.BukkitQuestsConfig;
 import com.leonardobishop.quests.bukkit.menu.itemstack.QItemStack;
-import com.leonardobishop.quests.bukkit.util.Format;
+import com.leonardobishop.quests.bukkit.util.FormatUtils;
 import com.leonardobishop.quests.bukkit.util.Messages;
 import com.leonardobishop.quests.bukkit.util.SoundUtils;
 import com.leonardobishop.quests.bukkit.util.chat.Chat;
@@ -23,10 +23,13 @@ import com.leonardobishop.quests.common.quest.Task;
 import com.leonardobishop.quests.common.questcontroller.QuestController;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -71,7 +74,7 @@ public class NormalQuestController implements QuestController {
                     break;
                 case QUEST_COOLDOWN:
                     long cooldown = qPlayer.getQuestProgressFile().getCooldownFor(quest);
-                    questResultMessage = Messages.QUEST_START_COOLDOWN.getMessage().replace("{time}", Format.formatTime(TimeUnit.SECONDS.convert
+                    questResultMessage = Messages.QUEST_START_COOLDOWN.getMessage().replace("{time}", FormatUtils.time(TimeUnit.SECONDS.convert
                             (cooldown, TimeUnit.MILLISECONDS)));
                     break;
                 case QUEST_LOCKED:
@@ -112,16 +115,17 @@ public class NormalQuestController implements QuestController {
             questProgress.setCompleted(false);
             if (player != null) {
                 QItemStack qItemStack = plugin.getQItemStackRegistry().getQuestItemStack(quest);
-                String displayName = Chat.legacyStrip(qItemStack.getName());
-                String questStartMessage = Messages.QUEST_START.getMessage().replace("{quest}", displayName);
+                String displayName = qItemStack.getName();
+                String displayNameStripped = Chat.legacyStrip(displayName);
+                String questStartMessage = Messages.QUEST_START.getMessage().replace("{quest}", displayNameStripped).replace("{questcolored}", displayName);
                 // PlayerStartQuestEvent -- start
                 PlayerStartQuestEvent questStartEvent = new PlayerStartQuestEvent(player, qPlayer, questProgress, questStartMessage);
                 Bukkit.getPluginManager().callEvent(questStartEvent);
                 // PlayerStartQuestEvent -- end
                 Messages.send(questStartEvent.getQuestStartMessage(), player);
                 if (config.getBoolean("options.titles-enabled")) {
-                    plugin.getTitleHandle().sendTitle(player, Messages.TITLE_QUEST_START_TITLE.getMessageLegacyColor().replace("{quest}", displayName),
-                            Messages.TITLE_QUEST_START_SUBTITLE.getMessageLegacyColor().replace("{quest}", displayName));
+                    plugin.getTitleHandle().sendTitle(player, Messages.TITLE_QUEST_START_TITLE.getMessageLegacyColor().replace("{quest}", displayNameStripped).replace("{questcolored}", displayName),
+                            Messages.TITLE_QUEST_START_SUBTITLE.getMessageLegacyColor().replace("{quest}", displayNameStripped).replace("{questcolored}", displayName));
                 }
                 for (String s : quest.getStartCommands()) {
                     s = s.replace("{player}", player.getName());
@@ -186,10 +190,13 @@ public class NormalQuestController implements QuestController {
                 return QuestStartResult.NO_PERMISSION_FOR_CATEGORY;
             }
         }
-        if (questProgress.isStarted() || quest.isAutoStartEnabled() || config.getBoolean("options.quest-autostart")) {
+
+        boolean autostart = this.config.getBoolean("options.quest-autostart");
+        if (questProgress.isStarted() || quest.isAutoStartEnabled() || autostart) {
             return QuestStartResult.QUEST_ALREADY_STARTED;
         }
-        if (!config.getBoolean("options.quest-autostart") && quest.doesCountTowardsLimit()) {
+
+        if (quest.doesCountTowardsLimit()) {
             Set<Quest> startedQuests = getStartedQuestsForPlayer(qPlayer);
             int questLimitCount = 0;
             for (Quest q : startedQuests) {
@@ -201,6 +208,7 @@ public class NormalQuestController implements QuestController {
                 return QuestStartResult.QUEST_LIMIT_REACHED;
             }
         }
+
         return QuestStartResult.QUEST_SUCCESS;
     }
 
@@ -216,19 +224,22 @@ public class NormalQuestController implements QuestController {
         questProgress.setCompleted(true);
         questProgress.setCompletedBefore(true);
         questProgress.setCompletionDate(System.currentTimeMillis());
-        if (config.getBoolean("options.allow-quest-track")) {
-            trackNextQuest(qPlayer, quest);
-        }
         Player player = Bukkit.getPlayer(qPlayer.getPlayerUUID());
         if (player != null) {
             QItemStack qItemStack = plugin.getQItemStackRegistry().getQuestItemStack(quest);
-            String displayName = Chat.legacyStrip(qItemStack.getName());
-            String questFinishMessage = Messages.QUEST_COMPLETE.getMessage().replace("{quest}", displayName);
+            String displayName = qItemStack.getName();
+            String displayNameStripped = Chat.legacyStrip(displayName);
+            String questFinishMessage = Messages.QUEST_COMPLETE.getMessage().replace("{quest}", displayNameStripped).replace("{questcolored}", displayName);
             // PlayerFinishQuestEvent -- start
             PlayerFinishQuestEvent questFinishEvent = new PlayerFinishQuestEvent(player, qPlayer, questProgress, questFinishMessage);
             Bukkit.getPluginManager().callEvent(questFinishEvent);
             // PlayerFinishQuestEvent -- end
             plugin.getScheduler().doSync(() -> {
+                final double vaultReward = quest.getVaultReward();
+                if (vaultReward > 0.0D) {
+                    this.plugin.getVaultHook().depositPlayer(player, vaultReward);
+                }
+
                 for (String s : quest.getRewards()) {
                     s = s.replace("{player}", player.getName());
                     if (plugin.getConfig().getBoolean("options.quests-use-placeholderapi")) {
@@ -240,8 +251,8 @@ public class NormalQuestController implements QuestController {
             });
             Messages.send(questFinishEvent.getQuestFinishMessage(), player);
             if (config.getBoolean("options.titles-enabled")) {
-                plugin.getTitleHandle().sendTitle(player, Messages.TITLE_QUEST_COMPLETE_TITLE.getMessageLegacyColor().replace("{quest}", displayName),
-                        Messages.TITLE_QUEST_COMPLETE_SUBTITLE.getMessageLegacyColor().replace("{quest}", displayName));
+                plugin.getTitleHandle().sendTitle(player, Messages.TITLE_QUEST_COMPLETE_TITLE.getMessageLegacyColor().replace("{quest}", displayNameStripped).replace("{questcolored}", displayName),
+                        Messages.TITLE_QUEST_COMPLETE_SUBTITLE.getMessageLegacyColor().replace("{quest}", displayNameStripped).replace("{questcolored}", displayName));
             }
             for (String s : quest.getRewardString()) {
                 if (plugin.getConfig().getBoolean("options.quests-use-placeholderapi")) {
@@ -251,12 +262,15 @@ public class NormalQuestController implements QuestController {
             }
             SoundUtils.playSoundForPlayer(player, plugin.getQuestsConfig().getString("options.sounds.quest-complete"));
         }
+        if (this.config.getBoolean("options.allow-quest-track") && this.config.getBoolean("options.quest-autotrack")) {
+            this.trackNextQuest(qPlayer, quest);
+        }
         return true;
     }
 
     @Override
     public boolean hasPlayerStartedQuest(QPlayer qPlayer, Quest quest) {
-        return config.getBoolean("options.quest-autostart") || quest.isAutoStartEnabled()
+        return quest.isAutoStartEnabled() || config.getBoolean("options.quest-autostart")
                 ? canPlayerStartQuest(qPlayer, quest).hasPlayerStartedQuest()
                 : qPlayer.getQuestProgressFile().hasQuestStarted(quest);
     }
@@ -287,8 +301,9 @@ public class NormalQuestController implements QuestController {
        resetQuest(questProgress);
         if (player != null) {
             QItemStack qItemStack = plugin.getQItemStackRegistry().getQuestItemStack(quest);
-            String displayName = Chat.legacyStrip(qItemStack.getName());
-            String questCancelMessage = Messages.QUEST_CANCEL.getMessage().replace("{quest}", displayName);
+            String displayName = qItemStack.getName();
+            String displayNameStripped = Chat.legacyStrip(displayName);
+            String questCancelMessage = Messages.QUEST_CANCEL.getMessage().replace("{quest}", displayNameStripped).replace("{questcolored}", displayName);
             // PlayerCancelQuestEvent -- start
             PlayerCancelQuestEvent questCancelEvent = new PlayerCancelQuestEvent(player, qPlayer, questProgress, questCancelMessage);
             Bukkit.getPluginManager().callEvent(questCancelEvent);
@@ -301,6 +316,12 @@ public class NormalQuestController implements QuestController {
                 } else {
                     Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), s);
                 }
+            }
+            for (String s : quest.getCancelString()) {
+                if (plugin.getConfig().getBoolean("options.quests-use-placeholderapi")) {
+                    s = plugin.getPlaceholderAPIProcessor().apply(player, s);
+                }
+                player.sendMessage(Chat.legacyColor(s));
             }
             SoundUtils.playSoundForPlayer(player, plugin.getQuestsConfig().getString("options.sounds.quest-cancel"));
         }
@@ -322,13 +343,28 @@ public class NormalQuestController implements QuestController {
         resetQuest(questProgress);
         if (player != null) {
             QItemStack qItemStack = plugin.getQItemStackRegistry().getQuestItemStack(quest);
-            String displayName = Chat.legacyStrip(qItemStack.getName());
-            String questExpireMessage = Messages.QUEST_EXPIRE.getMessage().replace("{quest}", displayName);
+            String displayName = qItemStack.getName();
+            String displayNameStripped = Chat.legacyStrip(displayName);
+            String questExpireMessage = Messages.QUEST_EXPIRE.getMessage().replace("{quest}", displayNameStripped).replace("{questcolored}", displayName);
             // PlayerCancelQuestEvent -- start
             PlayerExpireQuestEvent questCancelEvent = new PlayerExpireQuestEvent(player, qPlayer, questProgress, questExpireMessage);
             Bukkit.getPluginManager().callEvent(questCancelEvent);
             // PlayerCancelQuestEvent -- end
             Messages.send(questCancelEvent.getQuestExpireMessage(), player);
+            for (String s : quest.getExpiryCommands()) {
+                s = s.replace("{player}", player.getName());
+                if (plugin.getConfig().getBoolean("options.quests-use-placeholderapi")) {
+                    Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), plugin.getPlaceholderAPIProcessor().apply(player, s));
+                } else {
+                    Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), s);
+                }
+            }
+            for (String s : quest.getExpiryString()) {
+                if (plugin.getConfig().getBoolean("options.quests-use-placeholderapi")) {
+                    s = plugin.getPlaceholderAPIProcessor().apply(player, s);
+                }
+                player.sendMessage(Chat.legacyColor(s));
+            }
         }
         if (config.getBoolean("options.allow-quest-track")
                 && config.getBoolean("options.quest-autotrack")
@@ -339,30 +375,50 @@ public class NormalQuestController implements QuestController {
     }
 
     @Override
-    public void trackQuestForPlayer(QPlayer qPlayer, Quest quest) {
-        Player player = Bukkit.getPlayer(qPlayer.getPlayerUUID());
+    public void trackQuestForPlayer(final @NotNull QPlayer qPlayer, final @Nullable Quest quest) {
+        final String trackedQuestId = qPlayer.getPlayerPreferences().getTrackedQuestId();
+        final String questId = quest != null ? quest.getId() : null;
+
+        if (!Objects.equals(questId, trackedQuestId)) {
+            qPlayer.getPlayerPreferences().setTrackedQuestId(questId); // always update it
+        } else {
+            return; // no need to send messages or call events again
+        }
+
+        final Player player = this.plugin.getServer().getPlayer(qPlayer.getPlayerUUID());
+        if (player == null) {
+            return; // we can't even send a message or call an event without the player
+        }
 
         if (quest == null) {
-            String currentTrackedQuestId = qPlayer.getPlayerPreferences().getTrackedQuestId();
-            qPlayer.getPlayerPreferences().setTrackedQuestId(null);
-            if (player != null) {
-                Bukkit.getPluginManager().callEvent(new PlayerStopTrackQuestEvent(player, qPlayer));
-                Quest currentTrackedQuest;
-                if (currentTrackedQuestId != null && (currentTrackedQuest = plugin.getQuestManager().getQuestById(currentTrackedQuestId)) != null) {
-                    QItemStack qItemStack = plugin.getQItemStackRegistry().getQuestItemStack(currentTrackedQuest);
-                    String displayName = Chat.legacyStrip(qItemStack.getName());
-                    Messages.QUEST_TRACK_STOP.send(player, "{quest}", displayName);
-                }
+            this.plugin.getServer().getPluginManager().callEvent(new PlayerStopTrackQuestEvent(player, qPlayer));
+
+            // we can assume that trackedQuestId != null because of the Objects#equals check above
+            final Quest trackedQuest = this.plugin.getQuestManager().getQuestById(trackedQuestId);
+
+            // it can be still null if the quest was removed
+            if (trackedQuest != null) {
+                final QItemStack item = this.plugin.getQItemStackRegistry().getQuestItemStack(trackedQuest);
+                final String displayName = item.getName();
+                final String displayNameStripped = Chat.legacyStrip(displayName);
+                Messages.QUEST_TRACK_STOP.send(player, "{questcolored}", displayName, "{quest}", displayNameStripped);
             }
-        } else if (qPlayer.hasStartedQuest(quest)) {
-            QItemStack qItemStack = plugin.getQItemStackRegistry().getQuestItemStack(quest);
-            String displayName = Chat.legacyStrip(qItemStack.getName());
-            qPlayer.getPlayerPreferences().setTrackedQuestId(quest.getId());
-            if (player != null) {
-                Bukkit.getPluginManager().callEvent(new PlayerStartTrackQuestEvent(player, qPlayer));
-                Messages.QUEST_TRACK.send(player, "{quest}", displayName);
-            }
+
+            // return and handle quest != null case
+            return;
         }
+
+        // we don't want to notify player about start of a quest which hasn't been started
+        if (!qPlayer.hasStartedQuest(quest)) {
+            return;
+        }
+
+        this.plugin.getServer().getPluginManager().callEvent(new PlayerStartTrackQuestEvent(player, qPlayer));
+
+        final QItemStack item = this.plugin.getQItemStackRegistry().getQuestItemStack(quest);
+        final String displayName = item.getName();
+        final String displayNameStripped = Chat.legacyStrip(displayName);
+        Messages.QUEST_TRACK.send(player, "{questcolored}", displayName, "{quest}", displayNameStripped);
     }
 
     private Set<Quest> getStartedQuestsForPlayer(QPlayer qPlayer) {
@@ -386,19 +442,31 @@ public class NormalQuestController implements QuestController {
         return startedQuests;
     }
 
-    private void trackNextQuest(QPlayer qPlayer, Quest previousQuest) {
-        if (config.getBoolean("options.quest-autotrack")
-                && (previousQuest == null || !(previousQuest.isRepeatable() && !previousQuest.isCooldownEnabled()))) {
-            Quest nextQuest;
-            if (qPlayer.getQuestProgressFile().getStartedQuests().size() > 0) {
-                nextQuest = qPlayer.getQuestProgressFile().getStartedQuests().get(0);
-                qPlayer.trackQuest(nextQuest);
-            } else {
-                qPlayer.trackQuest(null);
-            }
-        } else if (!config.getBoolean("options.quest-autotrack")) {
+    private void trackNextQuest(final @NotNull QPlayer qPlayer, final @Nullable Quest previousQuest) {
+        final boolean autotrack = this.config.getBoolean("options.quest-autotrack");
+
+        if (!autotrack) {
             qPlayer.trackQuest(null);
+            return;
+        }
+
+        if (previousQuest == null || !previousQuest.isRepeatable() || previousQuest.isCooldownEnabled()) {
+            final List<Quest> startedQuests = qPlayer.getQuestProgressFile().getStartedQuests();
+
+            final Quest nextQuest;
+            if (!startedQuests.isEmpty()) {
+                nextQuest = startedQuests.getFirst();
+            } else {
+                final List<Quest> effectiveStartedQuests = qPlayer.getEffectiveStartedQuests(1);
+
+                if (!effectiveStartedQuests.isEmpty()) {
+                    nextQuest = effectiveStartedQuests.getFirst();
+                } else {
+                    nextQuest = null;
+                }
+            }
+
+            qPlayer.trackQuest(nextQuest);
         }
     }
-
 }

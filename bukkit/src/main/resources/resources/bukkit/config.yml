@@ -33,7 +33,10 @@ options:
   # If categories are disabled, quests will be put into one big gui.
   categories-enabled: true
   # If true, the gui size will automatically change based on the amount of quests inside it.
-  trim-gui-size: true
+  trim-gui-size:
+    quests-category-menu: true
+    quests-menu: true
+    quests-started-menu: true
   # Enable/disable titles
   titles-enabled: true
   # Enable/disable BossBars
@@ -48,6 +51,10 @@ options:
     # See https://hub.spigotmc.org/javadocs/spigot/org/bukkit/boss/BarStyle.html
     style:
       '0.0': SOLID # for 0.0 and higher progress values (progress is always between 0.0 and 1.0)
+    # Max amount of active task progress boss bars at once
+    limit: -1
+    # Whether new boss bar should be added and make another (the least progress one - if exists) disappear
+    replace-on-limit: true
   # Enable/disable ActionBar
   actionbar:
     progress: false
@@ -89,7 +96,7 @@ options:
   gui-hide-quests-nopermission: false
   # Hide categories which a player cannot open due to permissions.
   gui-hide-categories-nopermission: false
-  # Replace placeholders from PlaceholderAPI in Quests GUI items
+  # Replace placeholders from PlaceholderAPI in Quests GUI items and titles
   gui-use-placeholderapi: false
   # Truncate quest requirements when there are multiple requirements to prevent enormous display items
   gui-truncate-requirements: true
@@ -117,7 +124,21 @@ options:
   # Otherwise, the bar will not appear at all.
   use-progress-as-fallback: true
   # PlayerBlockTracker class to be used with the hook
+  # Original solution: https://github.com/Flo0/PlayerBlockTracker
+  # Modern alternative: https://github.com/Krakenied/BlockTracker
   playerblocktracker-class-name: "com.gestankbratwurst.playerblocktracker.PlayerBlockTracker"
+  # How frequently placeholderapi_evaluate task placeholders will be refreshed (def=30 - 1.5s)
+  # (multiply SECONDS by 20 to get the number of ticks)
+  placeholderapi-global-refresh-ticks: 30
+  # By how much (in millis) CoreProtect database async block lookups will be
+  # delayed. It may be helpful in case CoreProtect block lookups work sometimes
+  # weird and doesn't account for some last instant/spammed block changes
+  coreprotect-block-lookup-delay: -1
+  # If true and WildStacker plugin is present and enabled, Quests will try to set up
+  # a dedicated WildStacker event handler for mobkilling kills. The dedicated handler
+  # makes the task type count kills depending on the number of "virtual" merged entities
+  # killed. Otherwise, vanilla approach will be used.
+  mobkilling-use-wildstacker-hook: true
   # Verify quests exist when a player's data is loaded - inconsistencies may arise when
   # players progress on specific quests and those quests are later removed. The problem is that their progress
   # is still kept in the quest progress file, which may lead to issues such as players reaching a quest started
@@ -173,6 +194,19 @@ options:
 quest-mode:
   mode: "NORMAL" # More modes are a work in progress
 
+# Most common locales:
+# de-DE: 1.234,56
+# en-US: 1,234.56
+# fr-ch: 1'234,56
+number-formats:
+  # decimal format used for processing float, double and BigDecimal placeholders
+  floating:
+    format: '#,##0.00'
+    locale: 'en-US'
+  # decimal format used for processing int, long and BigInteger placeholders
+  integral:
+    format: '#,##0'
+    locale: 'en-US'
 
 # -----------------------------------------------------------
 #  Global task configuration
@@ -358,6 +392,14 @@ gui:
 #          - "&7to your menus. This is purely cosmetic."
 #        type: "EMERALD_BLOCK"
 #  "quests": # apply to the general quests menu IF categories are disabled
+#    0:
+#      display:
+#        name: "&cExample Custom Item (slot 1)"
+#        lore:
+#          - "&7This is a custom item which can be added"
+#          - "&7to your menus. This is purely cosmetic."
+#        type: "EMERALD_BLOCK"
+#  "started": # apply to the started quests menu
 #    0:
 #      display:
 #        name: "&cExample Custom Item (slot 1)"

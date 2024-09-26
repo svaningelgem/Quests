@@ -208,11 +208,8 @@ public class QuestProgressFile {
      * @return {@link QuestProgress} or a blank generated one if the quest does not exist
      */
     public QuestProgress getQuestProgress(Quest quest) {
-        if (questProgress.containsKey(quest.getId())) {
-            return questProgress.get(quest.getId());
-        }
-        generateBlankQuestProgress(quest);
-        return getQuestProgress(quest);
+        QuestProgress qProgress = questProgress.get(quest.getId());
+        return qProgress != null ? qProgress : generateBlankQuestProgress(quest);
     }
 
     /**
@@ -222,16 +219,18 @@ public class QuestProgressFile {
      * @return true if player has the quest started
      */
     public boolean hasQuestStarted(Quest quest) {
-        return questProgress.containsKey(quest.getId()) && questProgress.get(quest.getId()).isStarted();
+        QuestProgress qProgress = questProgress.get(quest.getId());
+        return qProgress != null && qProgress.isStarted();
     }
 
     /**
      * Generate a new blank {@link QuestProgress} for a specified {@code quest}.
      *
      * @param quest the quest to generate progress for
+     * @return the generated blank {@link QuestProgress}
      */
-    public void generateBlankQuestProgress(Quest quest) {
-        generateBlankQuestProgress(quest, false);
+    public QuestProgress generateBlankQuestProgress(Quest quest) {
+        return generateBlankQuestProgress(quest, false);
     }
 
     /**
@@ -239,8 +238,9 @@ public class QuestProgressFile {
      *
      * @param quest the quest to generate progress for
      * @param modified the modified state of the quest
+     * @return the generated blank {@link QuestProgress}
      */
-    public void generateBlankQuestProgress(Quest quest, boolean modified) {
+    public QuestProgress generateBlankQuestProgress(Quest quest, boolean modified) {
         QuestProgress questProgress = new QuestProgress(plugin, quest.getId(), false, false, 0, playerUUID, false, 0, modified);
         for (Task task : quest.getTasks()) {
             TaskProgress taskProgress = new TaskProgress(questProgress, task.getId(), null, playerUUID, false, modified);
@@ -248,6 +248,7 @@ public class QuestProgressFile {
         }
 
         addQuestProgress(questProgress);
+        return questProgress;
     }
 
     public void clear() {
@@ -278,7 +279,7 @@ public class QuestProgressFile {
     @Deprecated
     public void clean() {
         plugin.getQuestsLogger().debug("Cleaning file " + playerUUID + ".");
-        if (!plugin.getTaskTypeManager().areRegistrationsAccepted()) {
+        if (!plugin.getTaskTypeManager().areRegistrationsOpen()) {
             ArrayList<String> invalidQuests = new ArrayList<>();
             for (String questId : this.questProgress.keySet()) {
                 Quest q;

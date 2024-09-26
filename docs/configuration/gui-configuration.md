@@ -25,6 +25,8 @@ The back button displayed within sub menus.
 gui:
   # ...
   back-button:
+    enabled: true
+    slot: 45 
     name: "&cReturn"
     lore:
     - "&7Return to the categories menu."
@@ -42,6 +44,8 @@ The previous page button displayed on paiginated menus.
 gui:
   # ...
   page-prev:
+    enabled: true
+    slot: 48 
     name: "&7Previous Page"
     lore:
     - "&7Switch the page to page &c{prevpage}."
@@ -62,6 +66,8 @@ The next page button displayed on paiginated menus.
 gui:
   # ...
   page-next:
+    enabled: true
+    slot: 50 
     name: "&7Next Page"
     lore:
     - "&7Switch the page to page &c{nextpage}."
@@ -82,6 +88,8 @@ item will automatically update on the page number.
 gui:
   # ...
   page-desc:
+    enabled: true
+    slot: 49
     name: "&7Page &c{page}"
     lore:
     - "&7You are currently viewing page &c{page}."
@@ -115,6 +123,9 @@ gui:
 The `{quest}` variable represents the quest [display
 name](creating-a-quest#name), with its formatting stripped.
 
+The `{questcolored}` variable represents the quest [display
+name](creating-a-quest#name), with its formatting left as is.
+
 The `{questid}` variable represents the quest ID.
 
 The `{requirements}` variable represents the display names of the quests
@@ -145,6 +156,9 @@ gui:
 The `{quest}` variable represents the quest [display
 name](creating-a-quest#name), with its formatting stripped.
 
+The `{questcolored}` variable represents the quest [display
+name](creating-a-quest#name), with its formatting left as is.
+
 The `{questid}` variable represents the quest ID.
 
 ## Quest cooldown display
@@ -169,6 +183,9 @@ gui:
 
 The `{quest}` variable represents the quest [display
 name](creating-a-quest#name), with its formatting stripped.
+
+The `{questcolored}` variable represents the quest [display
+name](creating-a-quest#name), with its formatting left as is.
 
 The `{questid}` variable represents the quest ID.
 
@@ -197,6 +214,9 @@ gui:
 
 The `{quest}` variable represents the quest [display
 name](creating-a-quest#name), with its formatting stripped.
+
+The `{questcolored}` variable represents the quest [display
+name](creating-a-quest#name), with its formatting left as is.
 
 The `{questid}` variable represents the quest ID.
 

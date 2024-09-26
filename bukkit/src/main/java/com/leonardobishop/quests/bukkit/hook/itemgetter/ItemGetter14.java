@@ -1,8 +1,11 @@
 package com.leonardobishop.quests.bukkit.hook.itemgetter;
 
 import com.leonardobishop.quests.bukkit.BukkitQuestsPlugin;
+import com.leonardobishop.quests.bukkit.util.NamespacedKeyUtils;
 import com.leonardobishop.quests.bukkit.util.chat.Chat;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.configuration.ConfigurationSection;
@@ -13,21 +16,21 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
  * Reads the following:
  * <ul>
- *     <li>type (<b>without</b> data support, <b>without</b> namespace support)</li>
+ *     <li>type (<b>without</b> data support, <b>with</b> namespace support)</li>
  *     <li>name</li>
  *     <li>lore</li>
- *     <li>enchantments (<b>without</b> namespace support)</li>
+ *     <li>enchantments (<b>with</b> namespace support)</li>
  *     <li>item flags</li>
- *     <li>unbreakability</li>
- *     <li>attribute modifiers</li>
+ *     <li>unbreakability (<b>with</b> CraftBukkit support)</li>
+ *     <li>attribute modifiers (<b>without</b> namespace support)</li>
  *     <li>custom model data</li>
  * </ul>
  * Requires at least API version 1.14.
@@ -43,10 +46,10 @@ public class ItemGetter14 extends ItemGetter {
     public ItemStack getItem(String path, ConfigurationSection config, Filter... excludes) {
         config = config.getConfigurationSection(path);
         if (config == null) {
-            return invalidItemStack;
+            return INVALID_ITEM_STACK;
         }
 
-        List<Filter> filters = Arrays.asList(excludes);
+        Set<Filter> filters = Set.of(excludes);
 
         // type (without data)
         String typeString = config.getString("item", config.getString("type"));
@@ -87,22 +90,33 @@ public class ItemGetter14 extends ItemGetter {
                     continue;
                 }
 
-                Enchantment enchantment = Enchantment.getByName(parts[0]);
+                boolean namespaced = parts.length >= 2 && parts[0].startsWith("(") && parts[1].endsWith(")");
+
+                Enchantment enchantment;
+                if (namespaced) {
+                    String namespacedKeyString = enchantmentString.substring(1, parts[0].length() + parts[1].length());
+                    NamespacedKey namespacedKey = NamespacedKeyUtils.fromString(namespacedKeyString);
+                    enchantment = Enchantment.getByKey(namespacedKey);
+                } else {
+                    enchantment = Enchantment.getByName(parts[0]);
+                }
+
                 if (enchantment == null) {
                     continue;
                 }
 
-                int level;
-                if (parts.length == 2) {
+                // (namespace:key):level
+                // 0          1    2
+                // SOME_ENUM_NAME:level
+                // 0              1
+                int levelIndex = namespaced ? 2 : 1;
+
+                int level = 1;
+                if (parts.length >= levelIndex + 1) {
                     try {
-                        level = Integer.parseUnsignedInt(parts[1]);
-                    } catch (NumberFormatException e) {
-                        continue;
+                        level = Integer.parseUnsignedInt(parts[levelIndex]);
+                    } catch (NumberFormatException ignored) {
                     }
-                } else if (parts.length == 1) {
-                    level = 1;
-                } else {
-                    continue;
                 }
 
                 meta.addEnchant(enchantment, level, true);
@@ -125,9 +139,9 @@ public class ItemGetter14 extends ItemGetter {
         }
 
         // unbreakability
-        boolean unbreakable = config.getBoolean("unbreakable", false);
-        if (unbreakable && !filters.contains(Filter.UNBREAKABLE)) {
-            meta.setUnbreakable(true);
+        Boolean unbreakable = (Boolean) config.get("unbreakable");
+        if (unbreakable != null && !filters.contains(Filter.UNBREAKABLE)) {
+            meta.setUnbreakable(unbreakable);
         }
 
         // attribute modifiers
@@ -220,19 +234,38 @@ public class ItemGetter14 extends ItemGetter {
     @Override
     public ItemStack getItemStack(String typeString) {
         if (typeString == null) {
-            return invalidItemStack;
+            return INVALID_ITEM_STACK;
         }
 
         Material type = Material.getMaterial(typeString);
-        if (type == null) {
-            return invalidItemStack;
+        if (type != null) {
+            return new ItemStack(type, 1);
         }
 
-        return new ItemStack(type, 1);
+        NamespacedKey typeKey = NamespacedKeyUtils.fromString(typeString);
+        if (typeKey == null) {
+            return INVALID_ITEM_STACK;
+        }
+
+        type = Registry.MATERIAL.get(typeKey);
+        if (type != null) {
+            return new ItemStack(type, 1);
+        }
+
+        return INVALID_ITEM_STACK;
     }
 
     @Override
     public boolean isValidMaterial(String typeString) {
-        return Material.getMaterial(typeString) != null;
+        if (Material.getMaterial(typeString) != null) {
+            return true;
+        }
+
+        NamespacedKey typeKey = NamespacedKeyUtils.fromString(typeString);
+        if (typeKey == null) {
+            return false;
+        }
+
+        return Registry.MATERIAL.get(typeKey) != null;
     }
 }

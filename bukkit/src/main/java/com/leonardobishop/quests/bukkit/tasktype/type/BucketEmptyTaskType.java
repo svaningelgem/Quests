@@ -8,15 +8,12 @@ import org.bukkit.event.player.PlayerBucketEmptyEvent;
 
 public final class BucketEmptyTaskType extends BucketInteractionTaskType {
 
-    private final BukkitQuestsPlugin plugin;
-
     public BucketEmptyTaskType(BukkitQuestsPlugin plugin) {
-        super("bucketempty", TaskUtils.TASK_ATTRIBUTION_STRING, "Empty a specific bucket.");
-        this.plugin = plugin;
+        super(plugin, "bucketempty", TaskUtils.TASK_ATTRIBUTION_STRING, "Empty a specific bucket.");
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onBucketEmpty(PlayerBucketEmptyEvent event) {
-        super.onBucket(event.getPlayer(), event.getBucket(), plugin);
+    public void onPlayerBucketEmpty(PlayerBucketEmptyEvent event) {
+        handle(event.getPlayer(), plugin.getVersionSpecificHandler().getItem(event));
     }
 }
